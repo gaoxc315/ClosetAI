@@ -8,23 +8,34 @@ struct OutfitView: View {
     @State private var showManualOutfit = false
     @State private var showAllOccasion: String? = nil
     @State private var outfitToDelete: Outfit? = nil
+    @State private var showManageMembers = false
+
+    private var visibleOutfits: [Outfit] {
+        outfitVM.visibleOutfits(filter: wardrobeVM.selectedFilter, clothingItems: wardrobeVM.items)
+    }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Color(.systemGray6).ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 12) {
-                        if outfitVM.savedOutfits.isEmpty {
-                            emptyStateView
-                        } else {
-                            outfitSections
-                        }
+                VStack(spacing: 0) {
+                    FamilyMemberBar {
+                        showManageMembers = true
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 100)
+
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            if visibleOutfits.isEmpty {
+                                emptyStateView
+                            } else {
+                                outfitSections
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 100)
+                    }
                 }
             }
             .navigationTitle("穿搭")
@@ -57,6 +68,10 @@ struct OutfitView: View {
                 .environmentObject(outfitVM)
                 .environmentObject(wardrobeVM)
         }
+        .sheet(isPresented: $showManageMembers) {
+            ManageFamilyMembersView()
+                .environmentObject(wardrobeVM)
+        }
         .sheet(isPresented: Binding(
             get: { showAllOccasion != nil },
             set: { if !$0 { showAllOccasion = nil } }
@@ -72,8 +87,8 @@ struct OutfitView: View {
     // MARK: - Occasion Sections
 
     private var outfitSections: some View {
-        ForEach(outfitVM.occupiedOccasions, id: \.self) { occasion in
-            let outfits = outfitVM.outfits(for: occasion)
+        ForEach(outfitVM.occupiedOccasions(in: visibleOutfits), id: \.self) { occasion in
+            let outfits = outfitVM.outfits(for: occasion, in: visibleOutfits)
             outfitSectionCard(occasion: occasion, outfits: outfits)
         }
     }
@@ -135,16 +150,28 @@ struct OutfitView: View {
             Image(systemName: "wand.and.stars")
                 .font(.system(size: 52))
                 .foregroundColor(Color(.systemGray4))
-            Text("还没有保存的搭配")
+            Text(emptyTitle)
                 .font(.title3)
                 .fontWeight(.medium)
-            Text("点击右下角 + 创建你的第一套搭配")
+            Text("点击右下角 + 创建搭配")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             Spacer(minLength: 60)
         }
         .padding(.horizontal, 32)
+    }
+
+    private var emptyTitle: String {
+        switch wardrobeVM.selectedFilter {
+        case .all:
+            return "还没有保存的搭配"
+        case .unassigned:
+            return "没有未分配的搭配"
+        case .member(let id):
+            let name = wardrobeVM.familyMembers.first(where: { $0.id == id })?.name ?? "该成员"
+            return "还没有\(name)的搭配"
+        }
     }
 
     // MARK: - FAB
@@ -203,7 +230,10 @@ struct OccasionAllOutfitsSheet: View {
     @State private var selectedOutfit: Outfit?
     @State private var outfitToDelete: Outfit? = nil
 
-    private var outfits: [Outfit] { outfitVM.outfits(for: occasion) }
+    private var outfits: [Outfit] {
+        let visible = outfitVM.visibleOutfits(filter: wardrobeVM.selectedFilter, clothingItems: wardrobeVM.items)
+        return outfitVM.outfits(for: occasion, in: visible)
+    }
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
 
     var body: some View {

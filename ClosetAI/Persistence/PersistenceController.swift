@@ -174,6 +174,9 @@ class PersistenceController {
         for item in clothes {
             item.memberId = nil
         }
+        for outfit in fetchOutfits() where outfit.memberId == memberId {
+            outfit.memberId = nil
+        }
         container.viewContext.delete(member)
         save()
     }
@@ -190,6 +193,7 @@ class PersistenceController {
         entity.occasion = model.occasion
         entity.collagePath = model.collagePath
         entity.isFavorite = model.isFavorite
+        entity.memberId = model.memberId
         entity.createdAt = model.createdAt
         save()
         return entity

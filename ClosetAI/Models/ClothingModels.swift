@@ -189,6 +189,7 @@ struct OutfitModel: Identifiable {
     var occasion: String
     var collagePath: String
     var isFavorite: Bool
+    var memberId: UUID?
     var createdAt: Date
 
     init(id: UUID = UUID(),
@@ -197,6 +198,7 @@ struct OutfitModel: Identifiable {
          occasion: String = "",
          collagePath: String = "",
          isFavorite: Bool = false,
+         memberId: UUID? = nil,
          createdAt: Date = Date()) {
         self.id = id
         self.name = name
@@ -204,6 +206,7 @@ struct OutfitModel: Identifiable {
         self.occasion = occasion
         self.collagePath = collagePath
         self.isFavorite = isFavorite
+        self.memberId = memberId
         self.createdAt = createdAt
     }
 }

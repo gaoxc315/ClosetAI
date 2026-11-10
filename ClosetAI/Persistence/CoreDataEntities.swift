@@ -67,6 +67,7 @@ extension Outfit {
     @NSManaged public var occasion: String?
     @NSManaged public var collagePath: String?
     @NSManaged public var isFavorite: Bool
+    @NSManaged public var memberId: UUID?
     @NSManaged public var createdAt: Date?
     @NSManaged public var tryOnResultPath: String?
 }
