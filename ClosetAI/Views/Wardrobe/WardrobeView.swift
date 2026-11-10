@@ -308,16 +308,16 @@ struct WardrobeView: View {
                 emptyStateView
             } else {
                 let columns = [
-                    GridItem(.flexible(), spacing: 10),
-                    GridItem(.flexible(), spacing: 10)
+                    GridItem(.flexible(), spacing: 6),
+                    GridItem(.flexible(), spacing: 6),
+                    GridItem(.flexible(), spacing: 6)
                 ]
-                LazyVGrid(columns: columns, spacing: 10) {
+                LazyVGrid(columns: columns, spacing: 6) {
                     ForEach(itemsForSelectedCategory) { item in
                         ClothingItemCard(
                             item: item,
                             isIdle: viewModel.idleItemIDs.contains(item.id ?? UUID())
                         )
-                        .frame(maxWidth: .infinity)
                         .onTapGesture { selectedItem = item }
                         .contextMenu {
                             Button(role: .destructive) {
@@ -328,7 +328,7 @@ struct WardrobeView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 8)
                 .padding(.top, 8)
             }
         }
@@ -355,7 +355,7 @@ struct WardrobeView: View {
                 emptyStateView
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 8)
         .padding(.top, 8)
     }
 
@@ -393,6 +393,7 @@ struct WardrobeView: View {
                             item: item,
                             isIdle: viewModel.idleItemIDs.contains(item.id ?? UUID())
                         )
+                        .frame(width: 88, height: 88)
                         .onTapGesture { selectedItem = item }
                         .contextMenu {
                             Button(role: .destructive) {
