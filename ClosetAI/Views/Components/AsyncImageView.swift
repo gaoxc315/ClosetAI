@@ -47,6 +47,104 @@ struct LocalImageView: View {
     }
 }
 
+// MARK: - Pinch-zoom image (pan when zoomed, double-tap toggle)
+
+struct ZoomableImageView: View {
+    let path: String?
+    var contentMode: ContentMode = .fit
+    @Binding var scale: CGFloat
+
+    @State private var lastScale: CGFloat = 1
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+
+    private let minScale: CGFloat = 1
+    private let maxScale: CGFloat = 6
+
+    var body: some View {
+        LocalImageView(path: path, contentMode: contentMode)
+            .scaleEffect(scale)
+            .offset(offset)
+            .gesture(magnifyGesture)
+            .simultaneousGesture(panGesture)
+            .onTapGesture(count: 2, perform: toggleZoom)
+            .onChange(of: path) { _, _ in reset() }
+    }
+
+    private var magnifyGesture: some Gesture {
+        MagnifyGesture()
+            .onChanged { value in
+                let next = lastScale * value.magnification
+                scale = min(max(next, minScale), maxScale)
+            }
+            .onEnded { _ in
+                lastScale = scale
+                if scale <= minScale + 0.02 {
+                    reset()
+                }
+            }
+    }
+
+    private var panGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                guard scale > minScale + 0.02 else { return }
+                offset = CGSize(
+                    width: lastOffset.width + value.translation.width,
+                    height: lastOffset.height + value.translation.height
+                )
+            }
+            .onEnded { _ in
+                lastOffset = offset
+            }
+    }
+
+    private func toggleZoom() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if scale > 1.2 {
+                reset()
+            } else {
+                scale = 2.5
+                lastScale = 2.5
+            }
+        }
+    }
+
+    private func reset() {
+        scale = 1
+        lastScale = 1
+        offset = .zero
+        lastOffset = .zero
+    }
+}
+
+struct FullscreenImageViewer: View {
+    let path: String?
+    var title: String = ""
+    @Environment(\.dismiss) private var dismiss
+    @State private var scale: CGFloat = 1
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                ZoomableImageView(path: path, contentMode: .fit, scale: $scale)
+                    .ignoresSafeArea()
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("完成") { dismiss() }
+                        .foregroundColor(.white)
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Clothing Item Card (square cell; image never drives layout width)
 
 struct ClothingItemCard: View {

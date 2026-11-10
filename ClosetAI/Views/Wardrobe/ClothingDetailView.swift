@@ -13,6 +13,8 @@ struct ClothingDetailView: View {
     @State private var showAllRelatedOutfits = false
     @State private var showDeleteConfirm = false
     @State private var editedMemberId: UUID?
+    @State private var imageScale: CGFloat = 1
+    @State private var showFullImage = false
 
     init(item: ClothingItem) {
         self.item = item
@@ -31,19 +33,22 @@ struct ClothingDetailView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    imageSection
-                    statsSection
-                    tagsSection
-                    relatedOutfitsSection
-                    if !editedTags.notes.isEmpty && !isEditing {
-                        notesSection
+            VStack(spacing: 0) {
+                imageSection
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        statsSection
+                        tagsSection
+                        relatedOutfitsSection
+                        if !editedTags.notes.isEmpty && !isEditing {
+                            notesSection
+                        }
                     }
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
                 }
-                .padding(.bottom, 32)
+                .scrollDismissesKeyboard(.immediately)
             }
-            .scrollDismissesKeyboard(.immediately)
             .navigationTitle(item.subCategory ?? item.category ?? "服装详情")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -102,33 +107,43 @@ struct ClothingDetailView: View {
                 .environmentObject(outfitVM)
                 .environmentObject(viewModel)
         }
+        .fullScreenCover(isPresented: $showFullImage) {
+            FullscreenImageViewer(
+                path: showOriginal ? item.originalImagePath : item.flatLayImagePath,
+                title: showOriginal ? "原始照片" : "平铺图"
+            )
+        }
     }
 
     // MARK: - Image Section
 
     private var imageSection: some View {
-        VStack {
-            ZStack {
-                if showOriginal {
-                    LocalImageView(path: item.originalImagePath, contentMode: .fit)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 320)
-                        .background(Color(.systemGray6))
-                        .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
-                } else {
-                    LocalImageView(path: item.flatLayImagePath, contentMode: .fit)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 320)
-                        .background(Color(.systemGray6))
-                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+        VStack(spacing: 8) {
+            ZStack(alignment: .topTrailing) {
+                ZoomableImageView(
+                    path: showOriginal ? item.originalImagePath : item.flatLayImagePath,
+                    contentMode: .fit,
+                    scale: $imageScale
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 360)
+                .background(Color(.systemGray6))
+                .clipped()
+                .id(showOriginal)
+                .simultaneousGesture(pageSwipeGesture)
+
+                Button {
+                    showFullImage = true
+                } label: {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(Color.black.opacity(0.45))
+                        .clipShape(Circle())
                 }
+                .padding(10)
             }
-            .animation(.easeInOut(duration: 0.3), value: showOriginal)
-            .gesture(DragGesture().onEnded { value in
-                if abs(value.translation.width) > 50 {
-                    withAnimation { showOriginal.toggle() }
-                }
-            })
 
             HStack(spacing: 8) {
                 Circle()
@@ -138,12 +153,22 @@ struct ClothingDetailView: View {
                     .fill(showOriginal ? AppColors.accent : Color(.systemGray4))
                     .frame(width: 6, height: 6)
             }
-            .padding(.top, 8)
 
-            Text(showOriginal ? "原始照片" : "平铺图 (左右滑动切换)")
+            Text(showOriginal ? "原始照片 · 双指缩放" : "平铺图 · 双指缩放，左右滑动切换")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
+    }
+
+    private var pageSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 24)
+            .onEnded { value in
+                guard imageScale <= 1.05 else { return }
+                guard abs(value.translation.width) > 50,
+                      abs(value.translation.width) > abs(value.translation.height) else { return }
+                withAnimation { showOriginal.toggle() }
+                imageScale = 1
+            }
     }
 
     // MARK: - Stats Section
