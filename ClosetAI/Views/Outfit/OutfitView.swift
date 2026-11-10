@@ -8,7 +8,6 @@ struct OutfitView: View {
     @State private var showManualOutfit = false
     @State private var showAllOccasion: String? = nil
     @State private var outfitToDelete: Outfit? = nil
-    @State private var showManageMembers = false
 
     private var visibleOutfits: [Outfit] {
         outfitVM.visibleOutfits(filter: wardrobeVM.selectedFilter, clothingItems: wardrobeVM.items)
@@ -20,9 +19,7 @@ struct OutfitView: View {
                 Color(.systemGray6).ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    FamilyMemberBar {
-                        showManageMembers = true
-                    }
+                    FamilyMemberBar(showsUnassigned: false, showsManage: false)
 
                     ScrollView {
                         VStack(spacing: 12) {
@@ -40,7 +37,12 @@ struct OutfitView: View {
             }
             .navigationTitle("穿搭")
             .navigationBarTitleDisplayMode(.inline)
-            .onAppear { outfitVM.loadSavedOutfits() }
+            .onAppear {
+                outfitVM.loadSavedOutfits()
+                if wardrobeVM.selectedFilter == .unassigned {
+                    wardrobeVM.selectFilter(.all)
+                }
+            }
             .alert("确认删除？", isPresented: Binding(
                 get: { outfitToDelete != nil },
                 set: { if !$0 { outfitToDelete = nil } }
@@ -66,10 +68,6 @@ struct OutfitView: View {
         .sheet(isPresented: $showManualOutfit) {
             ManualOutfitView()
                 .environmentObject(outfitVM)
-                .environmentObject(wardrobeVM)
-        }
-        .sheet(isPresented: $showManageMembers) {
-            ManageFamilyMembersView()
                 .environmentObject(wardrobeVM)
         }
         .sheet(isPresented: Binding(

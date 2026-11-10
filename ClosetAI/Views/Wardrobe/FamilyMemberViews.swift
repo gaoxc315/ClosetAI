@@ -2,7 +2,9 @@ import SwiftUI
 
 struct FamilyMemberBar: View {
     @EnvironmentObject var viewModel: WardrobeViewModel
-    var onManage: () -> Void
+    var showsUnassigned: Bool = true
+    var showsManage: Bool = true
+    var onManage: () -> Void = {}
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -20,17 +22,21 @@ struct FamilyMemberBar: View {
                         }
                     }
                 }
-                chip(title: "未分配", selected: viewModel.selectedFilter == .unassigned) {
-                    viewModel.selectFilter(.unassigned)
+                if showsUnassigned {
+                    chip(title: "未分配", selected: viewModel.selectedFilter == .unassigned) {
+                        viewModel.selectFilter(.unassigned)
+                    }
                 }
-                Button(action: onManage) {
-                    Label("管理", systemImage: "person.badge.plus")
-                        .font(.subheadline)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(Color(.systemGray6))
-                        .foregroundColor(AppColors.accent)
-                        .clipShape(Capsule())
+                if showsManage {
+                    Button(action: onManage) {
+                        Label("管理", systemImage: "person.badge.plus")
+                            .font(.subheadline)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(Color(.systemGray6))
+                            .foregroundColor(AppColors.accent)
+                            .clipShape(Capsule())
+                    }
                 }
             }
             .padding(.horizontal, 16)
