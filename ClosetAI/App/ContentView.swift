@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var wardrobeVM = WardrobeViewModel()
     @StateObject private var outfitVM = OutfitViewModel()
+    @StateObject private var categoryStore = CategoryStore()
 
     var body: some View {
         TabView {
@@ -12,6 +13,7 @@ struct ContentView: View {
                 }
                 .environmentObject(wardrobeVM)
                 .environmentObject(outfitVM)
+                .environmentObject(categoryStore)
 
             OutfitView()
                 .tabItem {
@@ -19,12 +21,14 @@ struct ContentView: View {
                 }
                 .environmentObject(outfitVM)
                 .environmentObject(wardrobeVM)
+                .environmentObject(categoryStore)
 
             SettingsView()
                 .tabItem {
                     Label("设置", systemImage: "slider.horizontal.3")
                 }
                 .environmentObject(wardrobeVM)
+                .environmentObject(categoryStore)
         }
         .accentColor(AppColors.accent)
     }

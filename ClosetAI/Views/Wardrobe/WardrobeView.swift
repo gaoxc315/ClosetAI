@@ -1,34 +1,9 @@
 import SwiftUI
 
-// MARK: - Category Section Definition
-
-private struct CategorySection {
-    let name: String
-    let categories: [String]
-    let isOther: Bool
-
-    static let all: [CategorySection] = [
-        CategorySection(name: "上装", categories: ["上装"], isOther: false),
-        CategorySection(name: "外套", categories: ["外套"], isOther: false),
-        CategorySection(name: "连衣裙", categories: ["连衣裙"], isOther: false),
-        CategorySection(name: "下装", categories: ["下装"], isOther: false),
-        CategorySection(name: "鞋子", categories: ["鞋子"], isOther: false),
-        CategorySection(name: "包包", categories: ["包包"], isOther: false),
-        CategorySection(name: "配饰", categories: ["配饰"], isOther: false),
-        CategorySection(name: "其他", categories: ["其他"], isOther: true),
-    ]
-
-    // The categories covered by all non-other sections
-    static let standardCategories: [String] = all
-        .filter { !$0.isOther }
-        .flatMap { $0.categories }
-}
-
-// MARK: - WardrobeView
-
 struct WardrobeView: View {
     @EnvironmentObject var viewModel: WardrobeViewModel
     @EnvironmentObject var outfitVM: OutfitViewModel
+    @EnvironmentObject var categoryStore: CategoryStore
 
     @State private var showCamera = false
     @State private var showPhotoPicker = false
@@ -111,6 +86,12 @@ struct WardrobeView: View {
                     searchButton
                 }
             }
+            .onChange(of: categoryStore.categories) { _, _ in
+                if selectedCategoryName != CategoryStore.allCategoryName,
+                   !categoryStore.names.contains(selectedCategoryName) {
+                    selectedCategoryName = CategoryStore.allCategoryName
+                }
+            }
             .onChange(of: selectedImage) { _, image in
                 guard let image = image else { return }
                 selectedImage = nil
@@ -153,6 +134,7 @@ struct WardrobeView: View {
             ClothingDetailView(item: item)
                 .environmentObject(viewModel)
                 .environmentObject(outfitVM)
+                .environmentObject(categoryStore)
         }
         .sheet(isPresented: $showDeletedItems) {
             DeletedItemsView()
@@ -226,42 +208,38 @@ struct WardrobeView: View {
     }
 
     private func items(forCategoryName name: String) -> [ClothingItem] {
-        guard let section = CategorySection.all.first(where: { $0.name == name }) else {
+        if name == CategoryStore.allCategoryName {
             return viewModel.filteredItems
         }
-        if section.isOther {
-            return viewModel.otherItems(excludingCategories: CategorySection.standardCategories)
-        }
-        return viewModel.items(inCategories: section.categories)
+        return viewModel.items(inCategories: [name])
     }
 
     // MARK: - Category Rail
 
     private var categoryRail: some View {
         HStack(spacing: 0) {
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 2) {
-                    ForEach(categoryRailNames, id: \.self) { name in
-                        AppTabItem(
-                            icon: AppTabIcon.category(name),
-                            title: name,
-                            selected: selectedCategoryName == name
-                        ) {
-                            selectedCategoryName = name
-                        }
+            VStack(spacing: 0) {
+                ForEach(categoryRailEntries, id: \.name) { entry in
+                    AppTabItem(
+                        icon: entry.icon,
+                        title: entry.name,
+                        selected: selectedCategoryName == entry.name
+                    ) {
+                        selectedCategoryName = entry.name
                     }
                 }
-                .padding(.vertical, 6)
             }
             .frame(width: 64)
+            .frame(maxHeight: .infinity)
             Divider()
         }
         .background(Color(.systemBackground))
         .zIndex(2)
     }
 
-    private var categoryRailNames: [String] {
-        ["全部"] + CategorySection.all.map(\.name)
+    private var categoryRailEntries: [(name: String, icon: String)] {
+        [(CategoryStore.allCategoryName, categoryStore.icon(forName: CategoryStore.allCategoryName))]
+            + categoryStore.categories.map { ($0.name, $0.icon) }
     }
 
     // MARK: - Category Grid (always 3 columns)

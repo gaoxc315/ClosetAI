@@ -3,11 +3,13 @@ import SwiftUI
 struct SettingsView: View {
     @StateObject private var settingsVM = SettingsViewModel()
     @EnvironmentObject var wardrobeVM: WardrobeViewModel
+    @EnvironmentObject var categoryStore: CategoryStore
 
     var body: some View {
         NavigationStack {
             List {
                 statisticsSection
+                categorySection
                 dataSection
                 infoSection
             }
@@ -41,6 +43,25 @@ struct SettingsView: View {
             }
         } header: {
             Text("统计面板")
+        }
+    }
+
+    private var categorySection: some View {
+        Section {
+            NavigationLink {
+                CategorySettingsView()
+            } label: {
+                LabeledContent {
+                    Text("\(categoryStore.categories.count) 项")
+                        .foregroundColor(.secondary)
+                } label: {
+                    Label("衣橱分类", systemImage: "square.grid.2x2")
+                }
+            }
+        } header: {
+            Text("衣橱")
+        } footer: {
+            Text("分类会显示在衣橱左侧，可增删和排序。")
         }
     }
 
@@ -259,5 +280,154 @@ struct NotWornRecentlyView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy/MM/dd"
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Category settings
+
+struct CategorySettingsView: View {
+    @EnvironmentObject var categoryStore: CategoryStore
+    @State private var editor: CategoryEditorState?
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(categoryStore.categories) { category in
+                    Button {
+                        editor = CategoryEditorState(category: category)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: category.icon)
+                                .font(.body)
+                                .foregroundStyle(AppColors.accent)
+                                .frame(width: 28)
+                            Text(category.name)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+                .onMove(perform: categoryStore.move)
+                .onDelete(perform: categoryStore.delete)
+            } footer: {
+                Text("「全部」始终在衣橱左侧顶部。删除分类不会删除衣物。")
+            }
+        }
+        .font(.subheadline)
+        .navigationTitle("衣橱分类")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                EditButton()
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    editor = CategoryEditorState()
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .sheet(item: $editor) { state in
+            CategoryEditorSheet(state: state) { name, icon in
+                if let category = state.category {
+                    return categoryStore.update(category, name: name, icon: icon)
+                }
+                return categoryStore.add(name: name, icon: icon)
+            }
+        }
+    }
+}
+
+private struct CategoryEditorState: Identifiable {
+    let id = UUID()
+    var category: WardrobeCategory?
+    var name: String
+    var icon: String
+
+    init(category: WardrobeCategory? = nil) {
+        self.category = category
+        self.name = category?.name ?? ""
+        self.icon = category?.icon ?? "tshirt"
+    }
+}
+
+private struct CategoryEditorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let state: CategoryEditorState
+    var onSave: (String, String) -> String?
+
+    @State private var name: String
+    @State private var icon: String
+    @State private var errorMessage: String?
+
+    init(state: CategoryEditorState, onSave: @escaping (String, String) -> String?) {
+        self.state = state
+        self.onSave = onSave
+        _name = State(initialValue: state.name)
+        _icon = State(initialValue: state.icon)
+    }
+
+    private let columns = [
+        GridItem(.adaptive(minimum: 44), spacing: 10)
+    ]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("名称") {
+                    TextField("例如：帽子", text: $name)
+                }
+                Section("图标") {
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(CategoryStore.iconChoices, id: \.self) { symbol in
+                            Button {
+                                icon = symbol
+                            } label: {
+                                Image(systemName: symbol)
+                                    .font(.title3)
+                                    .frame(width: 44, height: 44)
+                                    .foregroundStyle(icon == symbol ? .white : AppColors.accent)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(icon == symbol ? AppColors.accent : Color(.systemGray6))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .navigationTitle(state.category == nil ? "添加分类" : "编辑分类")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        if let error = onSave(name, icon) {
+                            errorMessage = error
+                        } else {
+                            dismiss()
+                        }
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .alert("无法保存", isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("好的", role: .cancel) { errorMessage = nil }
+            } message: {
+                Text(errorMessage ?? "")
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }

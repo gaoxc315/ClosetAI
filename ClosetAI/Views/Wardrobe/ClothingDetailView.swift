@@ -4,6 +4,7 @@ struct ClothingDetailView: View {
     let item: ClothingItem
     @EnvironmentObject var viewModel: WardrobeViewModel
     @EnvironmentObject var outfitVM: OutfitViewModel
+    @EnvironmentObject var categoryStore: CategoryStore
     @Environment(\.dismiss) var dismiss
 
     @State private var showOriginal = false
@@ -246,14 +247,19 @@ struct ClothingDetailView: View {
         }
     }
 
-    // 与 WardrobeView.CategorySection.all 保持同步
-    private static let categoryOptions = ["上装", "外套", "连衣裙", "下装", "鞋子", "包包", "配饰", "其他"]
+    private var categoryOptions: [String] {
+        var names = categoryStore.names
+        if !editedTags.category.isEmpty, !names.contains(editedTags.category) {
+            names.append(editedTags.category)
+        }
+        return names
+    }
 
     private var editableTagsForm: some View {
         VStack(alignment: .leading, spacing: 12) {
             memberSelectRow
             singleSelectRow(label: "大类", selected: $editedTags.category,
-                            options: Self.categoryOptions)
+                            options: categoryOptions)
             editField(label: "小类", text: $editedTags.subCategory)
             editField(label: "图案", text: $editedTags.pattern)
             editField(label: "备注", text: $editedTags.notes)

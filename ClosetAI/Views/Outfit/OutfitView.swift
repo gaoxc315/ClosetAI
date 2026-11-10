@@ -3,6 +3,7 @@ import SwiftUI
 struct OutfitView: View {
     @EnvironmentObject var outfitVM: OutfitViewModel
     @EnvironmentObject var wardrobeVM: WardrobeViewModel
+    @EnvironmentObject var categoryStore: CategoryStore
 
     @State private var selectedOutfit: Outfit?
     @State private var showManualOutfit = false
@@ -64,11 +65,13 @@ struct OutfitView: View {
             OutfitDetailView(outfit: outfit)
                 .environmentObject(outfitVM)
                 .environmentObject(wardrobeVM)
+                .environmentObject(categoryStore)
         }
         .sheet(isPresented: $showManualOutfit) {
             ManualOutfitView()
                 .environmentObject(outfitVM)
                 .environmentObject(wardrobeVM)
+                .environmentObject(categoryStore)
         }
         .sheet(isPresented: Binding(
             get: { showAllOccasion != nil },
@@ -78,6 +81,7 @@ struct OutfitView: View {
                 OccasionAllOutfitsSheet(occasion: occasion)
                     .environmentObject(outfitVM)
                     .environmentObject(wardrobeVM)
+                    .environmentObject(categoryStore)
             }
         }
     }
@@ -223,6 +227,7 @@ struct OccasionAllOutfitsSheet: View {
     let occasion: String
     @EnvironmentObject var outfitVM: OutfitViewModel
     @EnvironmentObject var wardrobeVM: WardrobeViewModel
+    @EnvironmentObject var categoryStore: CategoryStore
 
     @Environment(\.dismiss) var dismiss
     @State private var selectedOutfit: Outfit?
@@ -285,6 +290,7 @@ struct OccasionAllOutfitsSheet: View {
             OutfitDetailView(outfit: outfit)
                 .environmentObject(outfitVM)
                 .environmentObject(wardrobeVM)
+                .environmentObject(categoryStore)
         }
     }
 }
@@ -295,6 +301,7 @@ struct OutfitDetailView: View {
     let outfit: Outfit
     @EnvironmentObject var outfitVM: OutfitViewModel
     @EnvironmentObject var wardrobeVM: WardrobeViewModel
+    @EnvironmentObject var categoryStore: CategoryStore
     @Environment(\.dismiss) var dismiss
 
     @State private var showTryOn = false
@@ -382,6 +389,7 @@ struct OutfitDetailView: View {
             ClothingDetailView(item: item)
                 .environmentObject(wardrobeVM)
                 .environmentObject(outfitVM)
+                .environmentObject(categoryStore)
         }
     }
 

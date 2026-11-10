@@ -93,12 +93,11 @@ struct AppTabItem: View {
                     .minimumScaleFactor(0.8)
             }
             .foregroundStyle(selected ? AppColors.accent : Color(.systemGray))
-            .frame(minWidth: 56, maxWidth: .infinity)
-            .padding(.top, 6)
-            .padding(.bottom, 4)
+            .frame(minWidth: 56, maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

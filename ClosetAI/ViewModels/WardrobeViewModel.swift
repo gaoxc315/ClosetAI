@@ -39,6 +39,10 @@ class WardrobeViewModel: ObservableObject {
             self, selector: #selector(outfitsDidChange),
             name: .closetAIOutfitsDidChange, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(categoriesDidChange),
+            name: .closetAICategoriesDidChange, object: nil
+        )
     }
 
     func loadItems() {
@@ -50,6 +54,10 @@ class WardrobeViewModel: ObservableObject {
 
     @objc private func outfitsDidChange() {
         savedOutfits = persistence.fetchOutfits()
+    }
+
+    @objc private func categoriesDidChange() {
+        loadItems()
     }
 
     private func setupSearch() {

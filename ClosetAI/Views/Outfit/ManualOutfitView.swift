@@ -4,6 +4,7 @@ import SwiftUI
 struct ManualOutfitView: View {
     @EnvironmentObject var outfitVM: OutfitViewModel
     @EnvironmentObject var wardrobeVM: WardrobeViewModel
+    @EnvironmentObject var categoryStore: CategoryStore
     @Environment(\.dismiss) var dismiss
 
     @State private var selectedIDs: Set<UUID> = []
@@ -147,9 +148,14 @@ struct ManualOutfitView: View {
     }
 
     private var categoryMagnifyItems: [MagnifyingTabItem] {
-        (["全部"] + ClothingCategory.allCases.map(\.rawValue)).map {
-            MagnifyingTabItem(id: $0, icon: AppTabIcon.category($0), title: $0)
-        }
+        [MagnifyingTabItem(
+            id: CategoryStore.allCategoryName,
+            icon: categoryStore.icon(forName: CategoryStore.allCategoryName),
+            title: CategoryStore.allCategoryName
+        )]
+            + categoryStore.categories.map {
+                MagnifyingTabItem(id: $0.name, icon: $0.icon, title: $0.name)
+            }
     }
 
     // MARK: - Bottom bar
@@ -219,9 +225,9 @@ struct ManualOutfitView: View {
     private func confirmSelection() {
         guard !selectedItems.isEmpty else { return }
         // 按类别排序：上装→外套→下装→鞋子→其他
-        let order: [String: Int] = ["上装": 0, "连衣裙": 0, "外套": 1, "下装": 2, "鞋子": 3, "包包": 4, "配饰": 5]
+        let order = Dictionary(uniqueKeysWithValues: categoryStore.names.enumerated().map { ($0.element, $0.offset) })
         let sorted = selectedItems.sorted {
-            (order[$0.category ?? ""] ?? 6) < (order[$1.category ?? ""] ?? 6)
+            (order[$0.category ?? ""] ?? 99) < (order[$1.category ?? ""] ?? 99)
         }
         // 构造 OutfitSuggestion，score=1 表示用户手动选择
         createdOutfit = OutfitSuggestion(items: sorted, score: 1.0)
