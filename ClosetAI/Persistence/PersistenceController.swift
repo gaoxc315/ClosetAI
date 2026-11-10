@@ -53,8 +53,12 @@ class PersistenceController {
                 // store 损坏时删除重建（数据清空，但 App 能启动）
                 if let storeURL = storeDesc.url {
                     let coordinator = self.container.persistentStoreCoordinator
-                    try? coordinator.destroyPersistentStore(at: storeURL, ofType: NSSQLiteStoreType, options: nil)
-                    try? coordinator.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: storeURL, options: nil)
+                    do {
+                        try coordinator.destroyPersistentStore(at: storeURL, ofType: NSSQLiteStoreType, options: nil)
+                        _ = try coordinator.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: storeURL, options: nil)
+                    } catch {
+                        print("‼️ Core Data store rebuild failed: \(error)")
+                    }
                 }
             } else {
                 print("✅ Core Data loaded: \(storeDesc.url?.lastPathComponent ?? "unknown")")
