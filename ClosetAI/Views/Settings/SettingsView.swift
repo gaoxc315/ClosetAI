@@ -58,10 +58,20 @@ struct SettingsView: View {
                     Label("衣橱分类", systemImage: "square.grid.2x2")
                 }
             }
+            NavigationLink {
+                ManageFamilyMembersView()
+            } label: {
+                LabeledContent {
+                    Text("\(wardrobeVM.familyMembers.count) 人")
+                        .foregroundColor(.secondary)
+                } label: {
+                    Label("家庭成员", systemImage: "person.2")
+                }
+            }
         } header: {
             Text("衣橱")
         } footer: {
-            Text("分类会显示在衣橱左侧，可增删和排序。")
+            Text("分类显示在衣橱左侧；成员显示在顶部，可在此增删。")
         }
     }
 

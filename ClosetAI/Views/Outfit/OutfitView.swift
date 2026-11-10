@@ -20,7 +20,7 @@ struct OutfitView: View {
                 Color(.systemGray6).ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    FamilyMemberBar(showsUnassigned: false, showsManage: false)
+                    FamilyMemberBar(showsUnassigned: false)
 
                     ScrollView {
                         VStack(spacing: 12) {

@@ -3,8 +3,6 @@ import SwiftUI
 struct FamilyMemberBar: View {
     @EnvironmentObject var viewModel: WardrobeViewModel
     var showsUnassigned: Bool = true
-    var showsManage: Bool = true
-    var onManage: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,9 +25,6 @@ struct FamilyMemberBar: View {
         if showsUnassigned {
             items.append(MagnifyingTabItem(id: "unassigned", icon: "tray", title: "未分配"))
         }
-        if showsManage {
-            items.append(MagnifyingTabItem(id: "manage", icon: "person.badge.plus", title: "管理", isAction: true))
-        }
         return items
     }
 
@@ -49,10 +44,6 @@ struct FamilyMemberBar: View {
     }
 
     private func handleSelect(_ item: MagnifyingTabItem) {
-        if item.isAction {
-            onManage()
-            return
-        }
         applySelection(item.id)
     }
 
@@ -72,72 +63,65 @@ struct FamilyMemberBar: View {
 
 struct ManageFamilyMembersView: View {
     @EnvironmentObject var viewModel: WardrobeViewModel
-    @Environment(\.dismiss) var dismiss
     @State private var newName = ""
     @State private var memberToDelete: FamilyMember?
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    HStack {
-                        TextField("例如：妈妈、爸爸、孩子", text: $newName)
-                        Button("添加") {
-                            viewModel.addFamilyMember(name: newName)
-                            newName = ""
-                        }
-                        .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        List {
+            Section {
+                HStack {
+                    TextField("例如：妈妈、爸爸、孩子", text: $newName)
+                    Button("添加") {
+                        viewModel.addFamilyMember(name: newName)
+                        newName = ""
                     }
-                } header: {
-                    Text("新增成员")
+                    .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
+            } header: {
+                Text("新增成员")
+            }
 
-                Section {
-                    ForEach(viewModel.familyMembers) { member in
-                        HStack {
-                            TextField("姓名", text: Binding(
-                                get: { member.name ?? "" },
-                                set: { viewModel.renameFamilyMember(member, name: $0) }
-                            ))
-                            Text(countText(for: member))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                memberToDelete = member
-                            } label: {
-                                Label("删除", systemImage: "trash")
-                            }
+            Section {
+                ForEach(viewModel.familyMembers) { member in
+                    HStack {
+                        TextField("姓名", text: Binding(
+                            get: { member.name ?? "" },
+                            set: { viewModel.renameFamilyMember(member, name: $0) }
+                        ))
+                        Text(countText(for: member))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            memberToDelete = member
+                        } label: {
+                            Label("删除", systemImage: "trash")
                         }
                     }
-                } header: {
-                    Text("家庭成员")
-                } footer: {
-                    Text("删除成员后，其衣物会回到「未分配」，不会被删除。")
                 }
+            } header: {
+                Text("家庭成员")
+            } footer: {
+                Text("删除成员后，其衣物会回到「未分配」，不会被删除。")
             }
-            .navigationTitle("家庭成员")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") { dismiss() }
+        }
+        .font(.subheadline)
+        .navigationTitle("家庭成员")
+        .navigationBarTitleDisplayMode(.inline)
+        .alert("删除该成员？", isPresented: Binding(
+            get: { memberToDelete != nil },
+            set: { if !$0 { memberToDelete = nil } }
+        )) {
+            Button("删除", role: .destructive) {
+                if let member = memberToDelete {
+                    viewModel.deleteFamilyMember(member)
                 }
+                memberToDelete = nil
             }
-            .alert("删除该成员？", isPresented: Binding(
-                get: { memberToDelete != nil },
-                set: { if !$0 { memberToDelete = nil } }
-            )) {
-                Button("删除", role: .destructive) {
-                    if let member = memberToDelete {
-                        viewModel.deleteFamilyMember(member)
-                    }
-                    memberToDelete = nil
-                }
-                Button("取消", role: .cancel) { memberToDelete = nil }
-            } message: {
-                Text("衣物会保留，并移到「未分配」。")
-            }
+            Button("取消", role: .cancel) { memberToDelete = nil }
+        } message: {
+            Text("衣物会保留，并移到「未分配」。")
         }
     }
 

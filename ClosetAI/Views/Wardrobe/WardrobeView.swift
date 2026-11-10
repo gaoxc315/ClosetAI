@@ -14,7 +14,6 @@ struct WardrobeView: View {
     @State private var showAllSectionItems: [ClothingItem] = []
     @State private var showSearch = false
     @State private var itemToDelete: ClothingItem? = nil
-    @State private var showManageMembers = false
     @State private var pendingImage: UIImage?
     @State private var showOwnerPicker = false
     @State private var selectedCategoryName: String = "全部"
@@ -31,9 +30,7 @@ struct WardrobeView: View {
                     }
 
                     if viewModel.searchText.isEmpty {
-                        FamilyMemberBar {
-                            showManageMembers = true
-                        }
+                        FamilyMemberBar()
                     }
 
                     HStack(spacing: 0) {
@@ -138,10 +135,6 @@ struct WardrobeView: View {
         }
         .sheet(isPresented: $showDeletedItems) {
             DeletedItemsView()
-                .environmentObject(viewModel)
-        }
-        .sheet(isPresented: $showManageMembers) {
-            ManageFamilyMembersView()
                 .environmentObject(viewModel)
         }
         .sheet(isPresented: $showOwnerPicker) {
