@@ -8,6 +8,7 @@ struct ManualOutfitView: View {
 
     @State private var selectedIDs: Set<UUID> = []
     @State private var filterCategory: String = "全部"
+    @State private var filterMember: FamilyFilter = .all
     @State private var createdOutfit: OutfitSuggestion?
     @State private var showMaxItemsAlert = false
     @State private var showNoAPIKeyAlert = false
@@ -17,7 +18,15 @@ struct ManualOutfitView: View {
     private let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
 
     private var availableItems: [ClothingItem] {
-        wardrobeVM.items.filter { !($0.isSoftDeleted) }
+        let active = wardrobeVM.items.filter { !($0.isSoftDeleted) }
+        switch filterMember {
+        case .all:
+            return active
+        case .unassigned:
+            return active.filter { $0.memberId == nil }
+        case .member(let id):
+            return active.filter { $0.memberId == id }
+        }
     }
 
     private var filteredItems: [ClothingItem] {
@@ -32,6 +41,7 @@ struct ManualOutfitView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                memberFilter
                 // Category filter chips
                 categoryFilter
 
@@ -58,6 +68,7 @@ struct ManualOutfitView: View {
                 }
             }
             .navigationTitle("创建我的穿搭")
+            .onAppear { filterMember = wardrobeVM.selectedFilter }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -83,6 +94,40 @@ struct ManualOutfitView: View {
         .sheet(item: $createdOutfit) { outfit in
             TryOnView(outfit: outfit)
                 .environmentObject(outfitVM)
+        }
+    }
+
+    // MARK: - Member filter
+
+    private var memberFilter: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                memberChip("全部", .all)
+                ForEach(wardrobeVM.familyMembers) { member in
+                    if let id = member.id {
+                        memberChip(member.name ?? "成员", .member(id))
+                    }
+                }
+                memberChip("未分配", .unassigned)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 4)
+        }
+        .background(Color(.systemBackground))
+    }
+
+    private func memberChip(_ title: String, _ filter: FamilyFilter) -> some View {
+        Button {
+            filterMember = filter
+        } label: {
+            Text(title)
+                .font(.caption)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(filterMember == filter ? AppColors.accent : Color(.systemGray6))
+                .foregroundColor(filterMember == filter ? .white : .primary)
+                .clipShape(Capsule())
         }
     }
 

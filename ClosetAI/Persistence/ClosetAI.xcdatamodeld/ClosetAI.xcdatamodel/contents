@@ -9,6 +9,7 @@
         <attribute name="isSoftDeleted" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="lastRecommendedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="lastWornDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="memberId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="notes" optional="YES" attributeType="String"/>
         <attribute name="occasions" optional="YES" attributeType="Transformable" valueTransformerName="StringArrayTransformer" customClassName="NSArray"/>
         <attribute name="originalImagePath" optional="YES" attributeType="String"/>
@@ -18,6 +19,12 @@
         <attribute name="styles" optional="YES" attributeType="Transformable" valueTransformerName="StringArrayTransformer" customClassName="NSArray"/>
         <attribute name="subCategory" optional="YES" attributeType="String"/>
         <attribute name="wearCount" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+    </entity>
+    <entity name="FamilyMember" representedClassName="FamilyMember" syncable="YES" codeGenerationType="none">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="sortOrder" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
     </entity>
     <entity name="Outfit" representedClassName="Outfit" syncable="YES" codeGenerationType="none">
         <attribute name="collagePath" optional="YES" attributeType="String"/>

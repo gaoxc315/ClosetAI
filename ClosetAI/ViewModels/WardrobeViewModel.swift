@@ -7,9 +7,17 @@ extension Notification.Name {
     static let closetAIOutfitsDidChange = Notification.Name("closetAIOutfitsDidChange")
 }
 
+enum FamilyFilter: Equatable, Hashable {
+    case all
+    case unassigned
+    case member(UUID)
+}
+
 class WardrobeViewModel: ObservableObject {
     @Published var items: [ClothingItem] = []
     @Published var filteredItems: [ClothingItem] = []
+    @Published var familyMembers: [FamilyMember] = []
+    @Published var selectedFilter: FamilyFilter = .all
     @Published var searchText: String = ""
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
@@ -20,8 +28,12 @@ class WardrobeViewModel: ObservableObject {
     private let imageService = ImageProcessingService.shared
     private let aliyunService = AliyunService.shared
 
+    private static let filterDefaultsKey = "closetai.familyFilter"
+
     init() {
+        persistence.seedDefaultFamilyMemberIfNeeded()
         loadItems()
+        restoreFilter()
         setupSearch()
         NotificationCenter.default.addObserver(
             self, selector: #selector(outfitsDidChange),
@@ -31,6 +43,7 @@ class WardrobeViewModel: ObservableObject {
 
     func loadItems() {
         items = persistence.fetchClothingItems(includeDeleted: false)
+        familyMembers = persistence.fetchFamilyMembers()
         savedOutfits = persistence.fetchOutfits()
         applyFilters()
     }
@@ -40,20 +53,106 @@ class WardrobeViewModel: ObservableObject {
     }
 
     private func setupSearch() {
-        Publishers.CombineLatest($searchText, $items)
+        Publishers.CombineLatest3($searchText, $items, $selectedFilter)
             .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
-            .sink { [weak self] _, _ in self?.applyFilters() }
+            .sink { [weak self] _, _, _ in self?.applyFilters() }
             .store(in: &cancellables)
+    }
+
+    func selectFilter(_ filter: FamilyFilter) {
+        selectedFilter = filter
+        persistFilter()
+        applyFilters()
+    }
+
+    func memberName(for item: ClothingItem) -> String {
+        guard let memberId = item.memberId else { return "未分配" }
+        return familyMembers.first(where: { $0.id == memberId })?.name ?? "未分配"
+    }
+
+    func addFamilyMember(name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        persistence.createFamilyMember(name: trimmed)
+        loadItems()
+    }
+
+    func renameFamilyMember(_ member: FamilyMember, name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        persistence.renameFamilyMember(member, name: trimmed)
+        objectWillChange.send()
+    }
+
+    func deleteFamilyMember(_ member: FamilyMember) {
+        if case .member(let id) = selectedFilter, id == member.id {
+            selectFilter(.all)
+        }
+        persistence.deleteFamilyMember(member)
+        loadItems()
+    }
+
+    func updateItemMember(_ item: ClothingItem, memberId: UUID?) {
+        item.memberId = memberId
+        persistence.save()
+        loadItems()
+    }
+
+    /// 当前筛选下新衣物应归属的成员；「全部」时返回 nil，由界面再选。
+    var memberIdForNewItem: UUID? {
+        if case .member(let id) = selectedFilter { return id }
+        return nil
+    }
+
+    var needsMemberPickForNewItem: Bool {
+        if case .member = selectedFilter { return false }
+        return true
+    }
+
+    private func persistFilter() {
+        switch selectedFilter {
+        case .all:
+            UserDefaults.standard.set("all", forKey: Self.filterDefaultsKey)
+        case .unassigned:
+            UserDefaults.standard.set("unassigned", forKey: Self.filterDefaultsKey)
+        case .member(let id):
+            UserDefaults.standard.set(id.uuidString, forKey: Self.filterDefaultsKey)
+        }
+    }
+
+    private func restoreFilter() {
+        let raw = UserDefaults.standard.string(forKey: Self.filterDefaultsKey) ?? "all"
+        switch raw {
+        case "all":
+            selectedFilter = .all
+        case "unassigned":
+            selectedFilter = .unassigned
+        default:
+            if let id = UUID(uuidString: raw), familyMembers.contains(where: { $0.id == id }) {
+                selectedFilter = .member(id)
+            } else {
+                selectedFilter = .all
+            }
+        }
     }
 
     private func applyFilters() {
         var result = items.filter { !$0.isSoftDeleted }
+        switch selectedFilter {
+        case .all:
+            break
+        case .unassigned:
+            result = result.filter { $0.memberId == nil }
+        case .member(let id):
+            result = result.filter { $0.memberId == id }
+        }
         if !searchText.isEmpty {
             let query = searchText.lowercased()
             result = result.filter {
                 ($0.category?.lowercased().contains(query) == true) ||
                 ($0.subCategory?.lowercased().contains(query) == true) ||
                 ($0.notes?.lowercased().contains(query) == true) ||
+                (memberName(for: $0).lowercased().contains(query)) ||
                 (($0.colors as? [String])?.joined().lowercased().contains(query) == true) ||
                 (($0.styles as? [String])?.joined().lowercased().contains(query) == true)
             }
@@ -64,14 +163,11 @@ class WardrobeViewModel: ObservableObject {
     // MARK: - Section Helpers
 
     func items(inCategories categories: [String]) -> [ClothingItem] {
-        items.filter { !$0.isSoftDeleted && categories.contains($0.category ?? "") }
+        filteredItems.filter { categories.contains($0.category ?? "") }
     }
 
     func otherItems(excludingCategories excluded: [String]) -> [ClothingItem] {
-        items.filter { item in
-            guard !item.isSoftDeleted else { return false }
-            return !excluded.contains(item.category ?? "")
-        }
+        filteredItems.filter { !excluded.contains($0.category ?? "") }
     }
 
     // MARK: - Idle Logic (v2.0: based on outfit association)
@@ -99,7 +195,10 @@ class WardrobeViewModel: ObservableObject {
     // MARK: - Statistics
 
     var totalCount: Int { items.filter { !$0.isSoftDeleted }.count }
-    var idleCount: Int { idleItemIDs.count }
+    var scopedCount: Int { filteredItems.count }
+    var idleCount: Int {
+        filteredItems.filter { idleItemIDs.contains($0.id ?? UUID()) }.count
+    }
 
     /// 衣物「上次穿着」日期：取包含该衣物的所有穿搭中最晚的 createdAt
     func lastOutfitDate(for item: ClothingItem) -> Date? {
@@ -130,7 +229,7 @@ class WardrobeViewModel: ObservableObject {
 
     // MARK: - Add Item with AI Processing
 
-    func processAndAddItem(image: UIImage) async {
+    func processAndAddItem(image: UIImage, memberId: UUID? = nil) async {
         await MainActor.run { isLoading = true; errorMessage = nil }
         do {
             let preprocessed = imageService.preprocessImage(image)
@@ -164,6 +263,7 @@ class WardrobeViewModel: ObservableObject {
                 styles: tags.styles,
                 seasons: tags.seasons,
                 occasions: tags.occasions,
+                memberId: memberId,
                 notes: tags.notes
             )
             persistence.createClothingItem(from: model)

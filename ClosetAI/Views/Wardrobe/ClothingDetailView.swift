@@ -12,6 +12,7 @@ struct ClothingDetailView: View {
     @State private var selectedRelatedOutfit: Outfit?
     @State private var showAllRelatedOutfits = false
     @State private var showDeleteConfirm = false
+    @State private var editedMemberId: UUID?
 
     init(item: ClothingItem) {
         self.item = item
@@ -25,6 +26,7 @@ struct ClothingDetailView: View {
         tags.occasions = (item.occasions as? [String]) ?? []
         tags.notes = item.notes ?? ""
         _editedTags = State(initialValue: tags)
+        _editedMemberId = State(initialValue: item.memberId)
     }
 
     var body: some View {
@@ -56,6 +58,7 @@ struct ClothingDetailView: View {
                     if isEditing {
                         Button {
                             viewModel.updateItem(item, tags: editedTags)
+                            viewModel.updateItemMember(item, memberId: editedMemberId)
                             isEditing = false
                         } label: {
                             Image(systemName: "checkmark")
@@ -186,6 +189,7 @@ struct ClothingDetailView: View {
 
     private var readonlyTags: some View {
         VStack(alignment: .leading, spacing: 12) {
+            tagRow(label: "成员", value: viewModel.memberName(for: item))
             if !editedTags.category.isEmpty { tagRow(label: "大类", value: editedTags.category) }
             if !editedTags.subCategory.isEmpty { tagRow(label: "小类", value: editedTags.subCategory) }
             if !editedTags.colors.isEmpty { tagRow(label: "颜色", tags: editedTags.colors) }
@@ -222,6 +226,7 @@ struct ClothingDetailView: View {
 
     private var editableTagsForm: some View {
         VStack(alignment: .leading, spacing: 12) {
+            memberSelectRow
             singleSelectRow(label: "大类", selected: $editedTags.category,
                             options: Self.categoryOptions)
             editField(label: "小类", text: $editedTags.subCategory)
@@ -231,6 +236,39 @@ struct ClothingDetailView: View {
             multiSelectRow(label: "场合", selected: $editedTags.occasions, options: Occasion.allCases.map { $0.rawValue })
         }
         .padding(.horizontal, 16)
+    }
+
+    private var memberSelectRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("成员").font(.caption).foregroundColor(.secondary)
+            FlowLayout(spacing: 8) {
+                Button {
+                    editedMemberId = nil
+                } label: {
+                    Text("未分配")
+                        .font(.caption)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(editedMemberId == nil ? AppColors.accent : Color(.systemGray5))
+                        .foregroundColor(editedMemberId == nil ? .white : .primary)
+                        .clipShape(Capsule())
+                }
+                ForEach(viewModel.familyMembers) { member in
+                    let selected = editedMemberId == member.id
+                    Button {
+                        editedMemberId = member.id
+                    } label: {
+                        Text(member.name ?? "成员")
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(selected ? AppColors.accent : Color(.systemGray5))
+                            .foregroundColor(selected ? .white : .primary)
+                            .clipShape(Capsule())
+                    }
+                }
+            }
+        }
     }
 
     private func editField(label: String, text: Binding<String>) -> some View {

@@ -136,6 +136,7 @@ struct ClothingItemModel: Identifiable {
     var wearCount: Int
     var lastWornDate: Date?
     var lastRecommendedAt: Date?
+    var memberId: UUID?
     var notes: String
     var isSoftDeleted: Bool
     var createdAt: Date
@@ -154,6 +155,7 @@ struct ClothingItemModel: Identifiable {
          wearCount: Int = 0,
          lastWornDate: Date? = nil,
          lastRecommendedAt: Date? = nil,
+         memberId: UUID? = nil,
          notes: String = "",
          isSoftDeleted: Bool = false,
          createdAt: Date = Date()) {
@@ -171,6 +173,7 @@ struct ClothingItemModel: Identifiable {
         self.wearCount = wearCount
         self.lastWornDate = lastWornDate
         self.lastRecommendedAt = lastRecommendedAt
+        self.memberId = memberId
         self.notes = notes
         self.isSoftDeleted = isSoftDeleted
         self.createdAt = createdAt

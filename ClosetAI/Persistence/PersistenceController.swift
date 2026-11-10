@@ -93,6 +93,7 @@ class PersistenceController {
         entity.wearCount = Int32(model.wearCount)
         entity.lastWornDate = model.lastWornDate
         entity.lastRecommendedAt = model.lastRecommendedAt
+        entity.memberId = model.memberId
         entity.notes = model.notes
         entity.isSoftDeleted = model.isSoftDeleted
         entity.createdAt = model.createdAt
@@ -124,6 +125,56 @@ class PersistenceController {
 
     func restoreClothingItem(_ item: ClothingItem) {
         item.isSoftDeleted = false
+        save()
+    }
+
+    // MARK: - FamilyMember CRUD
+
+    func seedDefaultFamilyMemberIfNeeded() {
+        let existing = fetchFamilyMembers()
+        guard existing.isEmpty else { return }
+        _ = createFamilyMember(name: "我")
+    }
+
+    func fetchFamilyMembers() -> [FamilyMember] {
+        let request: NSFetchRequest<FamilyMember> = FamilyMember.fetchRequest()
+        request.sortDescriptors = [
+            NSSortDescriptor(keyPath: \FamilyMember.sortOrder, ascending: true),
+            NSSortDescriptor(keyPath: \FamilyMember.createdAt, ascending: true)
+        ]
+        do {
+            return try container.viewContext.fetch(request)
+        } catch {
+            print("Fetch family members error: \(error)")
+            return []
+        }
+    }
+
+    @discardableResult
+    func createFamilyMember(name: String) -> FamilyMember {
+        let nextOrder = Int32(fetchFamilyMembers().count)
+        let context = container.viewContext
+        let entity = FamilyMember(context: context)
+        entity.id = UUID()
+        entity.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        entity.sortOrder = nextOrder
+        entity.createdAt = Date()
+        save()
+        return entity
+    }
+
+    func renameFamilyMember(_ member: FamilyMember, name: String) {
+        member.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        save()
+    }
+
+    func deleteFamilyMember(_ member: FamilyMember) {
+        let memberId = member.id
+        let clothes = fetchClothingItems(includeDeleted: true).filter { $0.memberId == memberId }
+        for item in clothes {
+            item.memberId = nil
+        }
+        container.viewContext.delete(member)
         save()
     }
 

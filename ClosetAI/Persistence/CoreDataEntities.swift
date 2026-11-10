@@ -25,12 +25,31 @@ extension ClothingItem {
     @NSManaged public var wearCount: Int32
     @NSManaged public var lastWornDate: Date?
     @NSManaged public var lastRecommendedAt: Date?
+    @NSManaged public var memberId: UUID?
     @NSManaged public var notes: String?
     @NSManaged public var isSoftDeleted: Bool
     @NSManaged public var createdAt: Date?
 }
 
 extension ClothingItem: Identifiable {}
+
+// MARK: - FamilyMember
+
+@objc(FamilyMember)
+public class FamilyMember: NSManagedObject {}
+
+extension FamilyMember {
+    @nonobjc public class func fetchRequest() -> NSFetchRequest<FamilyMember> {
+        return NSFetchRequest<FamilyMember>(entityName: "FamilyMember")
+    }
+
+    @NSManaged public var id: UUID?
+    @NSManaged public var name: String?
+    @NSManaged public var sortOrder: Int32
+    @NSManaged public var createdAt: Date?
+}
+
+extension FamilyMember: Identifiable {}
 
 // MARK: - Outfit
 

@@ -40,6 +40,9 @@ struct WardrobeView: View {
     @State private var showSearch = false
     @State private var itemToDelete: ClothingItem? = nil
     @State private var showNoAPIKeyAlert = false
+    @State private var showManageMembers = false
+    @State private var pendingImage: UIImage?
+    @State private var showOwnerPicker = false
 
     private var hasAPIKey: Bool {
         !(KeychainHelper.load(for: KeychainKey.dashscopeAPIKey) ?? "").isEmpty
@@ -54,6 +57,12 @@ struct WardrobeView: View {
                     // 搜索栏（按需呼出）
                     if showSearch {
                         searchBar
+                    }
+
+                    if viewModel.searchText.isEmpty {
+                        FamilyMemberBar {
+                            showManageMembers = true
+                        }
                     }
 
                     ScrollView {
@@ -103,7 +112,13 @@ struct WardrobeView: View {
             .onChange(of: selectedImage) { _, image in
                 guard let image = image else { return }
                 selectedImage = nil
-                Task { await viewModel.processAndAddItem(image: image) }
+                if viewModel.needsMemberPickForNewItem {
+                    pendingImage = image
+                    showOwnerPicker = true
+                } else {
+                    let memberId = viewModel.memberIdForNewItem
+                    Task { await viewModel.processAndAddItem(image: image, memberId: memberId) }
+                }
             }
             .alert("请先配置 API Key", isPresented: $showNoAPIKeyAlert) {
                 Button("好的") {}
@@ -146,6 +161,21 @@ struct WardrobeView: View {
             DeletedItemsView()
                 .environmentObject(viewModel)
         }
+        .sheet(isPresented: $showManageMembers) {
+            ManageFamilyMembersView()
+                .environmentObject(viewModel)
+        }
+        .sheet(isPresented: $showOwnerPicker) {
+            AssignMemberSheet { memberId in
+                guard let image = pendingImage else { return }
+                pendingImage = nil
+                Task { await viewModel.processAndAddItem(image: image, memberId: memberId) }
+            }
+            .environmentObject(viewModel)
+            .onDisappear {
+                pendingImage = nil
+            }
+        }
         .sheet(isPresented: Binding(
             get: { showAllSectionTitle != nil },
             set: { if !$0 { showAllSectionTitle = nil } }
@@ -164,15 +194,15 @@ struct WardrobeView: View {
 
     private var statsBar: some View {
         HStack(spacing: 5) {
-            Text("共 \(viewModel.totalCount) 件")
+            Text("共 \(viewModel.scopedCount) 件")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
             Text("·")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
             Button {
-                let idleItems = viewModel.items.filter {
-                    !$0.isSoftDeleted && viewModel.idleItemIDs.contains($0.id ?? UUID())
+                let idleItems = viewModel.filteredItems.filter {
+                    viewModel.idleItemIDs.contains($0.id ?? UUID())
                 }
                 showAllSectionItems = idleItems
                 showAllSectionTitle = "未搭配"
@@ -203,7 +233,7 @@ struct WardrobeView: View {
                 }
             }
 
-            if viewModel.totalCount == 0 {
+            if viewModel.filteredItems.isEmpty {
                 emptyStateView
             }
         }
@@ -314,13 +344,25 @@ struct WardrobeView: View {
             Image(systemName: "hanger")
                 .font(.system(size: 52))
                 .foregroundColor(Color(.systemGray4))
-            Text("衣橱还是空的")
+            Text(emptyTitle)
                 .font(.title3)
                 .fontWeight(.medium)
-            Text("点击右下角 + 添加第一件衣物")
+            Text("点击右下角 + 添加衣物，或点「管理」增加家庭成员")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             Spacer(minLength: 60)
+        }
+    }
+
+    private var emptyTitle: String {
+        switch viewModel.selectedFilter {
+        case .all:
+            return "衣橱还是空的"
+        case .unassigned:
+            return "没有未分配的衣物"
+        case .member(let id):
+            let name = viewModel.familyMembers.first(where: { $0.id == id })?.name ?? "该成员"
+            return "还没有\(name)的衣服"
         }
     }
 
