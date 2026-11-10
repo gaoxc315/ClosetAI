@@ -59,29 +59,34 @@ struct WardrobeView: View {
                         FamilyMemberBar {
                             showManageMembers = true
                         }
-                        categoryRail
                     }
 
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            if viewModel.searchText.isEmpty {
-                                statsBar
-                                    .padding(.horizontal, 12)
-                                    .padding(.top, 8)
-                                    .padding(.bottom, 4)
-                            }
-
-                            if viewModel.searchText.isEmpty {
-                                categoryGrid
-                            } else {
-                                searchContent
-                            }
+                    HStack(spacing: 0) {
+                        if viewModel.searchText.isEmpty {
+                            categoryRail
                         }
-                        .padding(.bottom, 100)
-                        .animation(.easeInOut(duration: 0.2), value: selectedCategoryName)
-                        .animation(.easeInOut(duration: 0.2), value: viewModel.selectedFilter)
+
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                if viewModel.searchText.isEmpty {
+                                    statsBar
+                                        .padding(.horizontal, 12)
+                                        .padding(.top, 8)
+                                        .padding(.bottom, 4)
+                                }
+
+                                if viewModel.searchText.isEmpty {
+                                    categoryGrid
+                                } else {
+                                    searchContent
+                                }
+                            }
+                            .padding(.bottom, 100)
+                            .animation(.easeInOut(duration: 0.2), value: selectedCategoryName)
+                            .animation(.easeInOut(duration: 0.2), value: viewModel.selectedFilter)
+                        }
+                        .scrollDismissesKeyboard(.immediately)
                     }
-                    .scrollDismissesKeyboard(.immediately)
                 }
 
                 // Loading toast
@@ -233,19 +238,30 @@ struct WardrobeView: View {
     // MARK: - Category Rail
 
     private var categoryRail: some View {
-        MagnifyingTabBar(
-            items: categoryMagnifyItems,
-            selection: $selectedCategoryName,
-            onSelect: { selectedCategoryName = $0.id }
-        )
+        HStack(spacing: 0) {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 2) {
+                    ForEach(categoryRailNames, id: \.self) { name in
+                        AppTabItem(
+                            icon: AppTabIcon.category(name),
+                            title: name,
+                            selected: selectedCategoryName == name
+                        ) {
+                            selectedCategoryName = name
+                        }
+                    }
+                }
+                .padding(.vertical, 6)
+            }
+            .frame(width: 64)
+            Divider()
+        }
+        .background(Color(.systemBackground))
         .zIndex(2)
     }
 
-    private var categoryMagnifyItems: [MagnifyingTabItem] {
-        [MagnifyingTabItem(id: "全部", icon: AppTabIcon.category("全部"), title: "全部")]
-            + CategorySection.all.map {
-                MagnifyingTabItem(id: $0.name, icon: AppTabIcon.category($0.name), title: $0.name)
-            }
+    private var categoryRailNames: [String] {
+        ["全部"] + CategorySection.all.map(\.name)
     }
 
     // MARK: - Category Grid (always 3 columns)
