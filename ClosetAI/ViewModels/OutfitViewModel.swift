@@ -60,15 +60,16 @@ class OutfitViewModel: ObservableObject {
 
         guard !imageDatas.isEmpty else { return nil }
 
-        // 策略：AI 模型直接合成（视觉效果最佳），Core Graphics 仅作兜底
-        do {
-            let resultData = try await aliyunService.generateAICollage(
-                imageDatas: imageDatas,
-                itemDescriptions: itemDescriptions
-            )
-            if let aiImage = UIImage(data: resultData) { return aiImage }
-        } catch {
-            print("AI collage error, falling back to Core Graphics: \(error)")
+        if AppFeatures.aiEnabled {
+            do {
+                let resultData = try await aliyunService.generateAICollage(
+                    imageDatas: imageDatas,
+                    itemDescriptions: itemDescriptions
+                )
+                if let aiImage = UIImage(data: resultData) { return aiImage }
+            } catch {
+                print("AI collage error, falling back to Core Graphics: \(error)")
+            }
         }
 
         return imageService.generateOutfitCollage(items: fallbackItems)
@@ -145,6 +146,10 @@ class OutfitViewModel: ObservableObject {
     // MARK: - Virtual Try-On
 
     func performVirtualTryOn(personImage: UIImage, items: [ClothingItem]) async {
+        guard AppFeatures.aiEnabled else {
+            await MainActor.run { errorMessage = "虚拟试穿已暂时关闭" }
+            return
+        }
         await MainActor.run { isTryingOn = true; tryOnResultImage = nil; errorMessage = nil }
         do {
             guard let personData = personImage.jpegData(compressionQuality: 0.8) else { return }

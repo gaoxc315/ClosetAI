@@ -5,7 +5,9 @@ struct ClosetAIApp: App {
     let persistenceController = PersistenceController.shared
 
     init() {
-        installDefaultModelPhotoIfNeeded()
+        if AppFeatures.aiEnabled {
+            installDefaultModelPhotoIfNeeded()
+        }
     }
 
     var body: some Scene {

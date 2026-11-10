@@ -11,7 +11,6 @@ struct ManualOutfitView: View {
     @State private var filterMember: FamilyFilter = .all
     @State private var createdOutfit: OutfitSuggestion?
     @State private var showMaxItemsAlert = false
-    @State private var showNoAPIKeyAlert = false
 
     private let maxSelectionCount = 4
 
@@ -83,11 +82,6 @@ struct ManualOutfitView: View {
                 Button("好的") {}
             } message: {
                 Text("AI 图片处理每次最多接受 \(maxSelectionCount) 张图片")
-            }
-            .alert("请先配置 API Key", isPresented: $showNoAPIKeyAlert) {
-                Button("好的") {}
-            } message: {
-                Text("请先在「设置」页面填写阿里云 DashScope API Key，再使用 AI 功能")
             }
         }
         // sheet 放在 NavigationStack 外面，避免嵌套冲突
@@ -226,10 +220,6 @@ struct ManualOutfitView: View {
 
     private func confirmSelection() {
         guard !selectedItems.isEmpty else { return }
-        guard !(KeychainHelper.load(for: KeychainKey.dashscopeAPIKey) ?? "").isEmpty else {
-            showNoAPIKeyAlert = true
-            return
-        }
         // 按类别排序：上装→外套→下装→鞋子→其他
         let order: [String: Int] = ["上装": 0, "连衣裙": 0, "外套": 1, "下装": 2, "鞋子": 3, "包包": 4, "配饰": 5]
         let sorted = selectedItems.sorted {

@@ -11,6 +11,7 @@
 		0209DB77FA5FA81AAA425D41 /* CoreDataEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE3B72170D9BB27ACD6E7E19 /* CoreDataEntities.swift */; };
 		05A8754E68FEC88F0C1A7509 /* AsyncImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3251CBE615F92319489155C /* AsyncImageView.swift */; };
 		1C4078D260BF626F43D85535 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF86531FB0977F517296DDE2 /* AppColors.swift */; };
+		C8E1C0F11A2B3C4D5E6F7092 /* AppFeatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8E1C0F11A2B3C4D5E6F7091 /* AppFeatures.swift */; };
 		2369C6843189523988225004 /* ImageProcessingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61F2A7AAFC9CF0C67FD776B /* ImageProcessingService.swift */; };
 		321EAAEAE1118FC394A020BD /* OutfitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCA4FC9D195C23ACAA3C402E /* OutfitView.swift */; };
 		32594ECBD90E9EE6799C58D0 /* ViewExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6A910C56182B080D0AFDDFF /* ViewExtensions.swift */; };
@@ -58,6 +59,7 @@
 		E61F2A7AAFC9CF0C67FD776B /* ImageProcessingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageProcessingService.swift; sourceTree = "<group>"; };
 		E90D0AAA368FF26A6D8BD786 /* ClothingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClothingModels.swift; sourceTree = "<group>"; };
 		EF86531FB0977F517296DDE2 /* AppColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
+		C8E1C0F11A2B3C4D5E6F7091 /* AppFeatures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeatures.swift; sourceTree = "<group>"; };
 		F0F628DE55D3E949927F7E31 /* ManualOutfitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualOutfitView.swift; sourceTree = "<group>"; };
 		FCA4FC9D195C23ACAA3C402E /* OutfitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitView.swift; sourceTree = "<group>"; };
 		FFF262E57161C85A7D274FEF /* OutfitViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitViewModel.swift; sourceTree = "<group>"; };
@@ -106,6 +108,7 @@
 		2DE6BF912E2F0EF1D155285F /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				C8E1C0F11A2B3C4D5E6F7091 /* AppFeatures.swift */,
 				EF86531FB0977F517296DDE2 /* AppColors.swift */,
 			);
 			path = Utilities;
@@ -296,6 +299,7 @@
 			files = (
 				8EDEC07588A512D5C2DCAC3B /* AliyunService.swift in Sources */,
 				1C4078D260BF626F43D85535 /* AppColors.swift in Sources */,
+				C8E1C0F11A2B3C4D5E6F7092 /* AppFeatures.swift in Sources */,
 				05A8754E68FEC88F0C1A7509 /* AsyncImageView.swift in Sources */,
 				66ABEA87CBE02F763C5CB8E2 /* CameraView.swift in Sources */,
 				618D3C84EDB4E9A629BB6CCE /* ClosetAI.xcdatamodeld in Sources */,

@@ -1,153 +1,20 @@
 import SwiftUI
-import PhotosUI
 
 struct SettingsView: View {
     @StateObject private var settingsVM = SettingsViewModel()
     @EnvironmentObject var wardrobeVM: WardrobeViewModel
 
-    @State private var modelPhoto: UIImage?
-    @State private var showModelPhotoPicker = false
-
     var body: some View {
         NavigationStack {
             List {
-                // API Configuration
-                apiSection
-
-                // Model Photo
-                modelPhotoSection
-
-                // Statistics
                 statisticsSection
-
-                // Data Management
                 dataSection
-
-                // App Info
                 infoSection
             }
             .font(.subheadline)
             .scrollDismissesKeyboard(.immediately)
             .navigationTitle("设置")
             .navigationBarTitleDisplayMode(.inline)
-            .alert("已保存", isPresented: $settingsVM.showSavedAlert) {
-                Button("确定") {}
-            }
-            .onAppear {
-                modelPhoto = settingsVM.loadModelPhoto()
-            }
-        }
-        .sheet(isPresented: $showModelPhotoPicker) {
-            PhotoPickerView(images: Binding(
-                get: { modelPhoto.map { [$0] } ?? [] },
-                set: { images in
-                    if let img = images.first {
-                        modelPhoto = img
-                        settingsVM.saveModelPhoto(img)
-                    }
-                }
-            ))
-        }
-    }
-
-    // MARK: - Model Photo Section
-
-    private var modelPhotoSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 12) {
-                if let photo = modelPhoto {
-                    HStack(spacing: 14) {
-                        // 768:1280 = 3:5，按比例等比缩小展示
-                        Image(uiImage: photo)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 60, height: 100)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(.systemGray4), lineWidth: 0.5))
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("已设置模特图")
-                                .fontWeight(.medium)
-                            Text("虚拟试穿时将自动使用此图片")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            HStack(spacing: 16) {
-                                Button("更换") {
-                                    showModelPhotoPicker = true
-                                }
-                                .foregroundColor(AppColors.accent)
-                                .buttonStyle(.borderless)
-
-                                Button("删除") {
-                                    settingsVM.clearModelPhoto()
-                                    modelPhoto = nil
-                                }
-                                .foregroundColor(.red)
-                                .buttonStyle(.borderless)
-                            }
-                        }
-                        Spacer()
-                    }
-                    .padding(.vertical, 4)
-                } else {
-                    Button {
-                        showModelPhotoPicker = true
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "person.crop.rectangle.badge.plus")
-                                .font(.title2)
-                                .foregroundColor(AppColors.accent)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("上传模特图")
-                                    .foregroundColor(.primary)
-                                    .fontWeight(.medium)
-                                Text("虚拟试穿时无需每次重新上传")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(Color(.systemGray3))
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-            }
-        } header: {
-            Text("默认模特图")
-        } footer: {
-            Text("设置后，虚拟试穿页面将自动加载此模特图，省去每次手动选择的步骤。")
-                .font(.caption)
-        }
-    }
-
-    // MARK: - Sections
-
-    private var apiSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 8) {
-                Label("DashScope API Key", systemImage: "key")
-                    .fontWeight(.medium)
-                SecureField("请输入 API Key", text: $settingsVM.dashscopeAPIKey)
-                    .textFieldStyle(.roundedBorder)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                Button("保存 API Key") {
-                    settingsVM.saveAPIKey()
-                }
-                .foregroundColor(AppColors.accent)
-            }
-            .padding(.vertical, 4)
-
-            NavigationLink(destination: APIGuideView()) {
-                Label("如何获取 API Key", systemImage: "questionmark.circle")
-            }
-        } header: {
-            Text("阿里云配置")
-        } footer: {
-            Text("API Key 安全存储在设备 Keychain 中，不会上传至任何服务器。")
-                .font(.caption)
         }
     }
 
@@ -221,39 +88,7 @@ struct SettingsView: View {
 // MARK: - SettingsViewModel
 
 class SettingsViewModel: ObservableObject {
-    @Published var dashscopeAPIKey: String = ""
-    @Published var showSavedAlert = false
     @Published var showClearConfirm = false
-
-    init() {
-        dashscopeAPIKey = KeychainHelper.load(for: KeychainKey.dashscopeAPIKey) ?? ""
-    }
-
-    func saveAPIKey() {
-        KeychainHelper.save(dashscopeAPIKey, for: KeychainKey.dashscopeAPIKey)
-        showSavedAlert = true
-    }
-
-    // MARK: - Model Photo
-
-    private let modelPhotoKey = "closetai.modelPhotoFilename"
-    private let modelPhotoFilename = "model_photo.jpg"
-
-    func loadModelPhoto() -> UIImage? {
-        guard UserDefaults.standard.string(forKey: modelPhotoKey) != nil else { return nil }
-        return ImageProcessingService.shared.loadImage(from: modelPhotoFilename)
-    }
-
-    func saveModelPhoto(_ image: UIImage) {
-        _ = ImageProcessingService.shared.saveImageToDocuments(image, filename: modelPhotoFilename)
-        UserDefaults.standard.set(modelPhotoFilename, forKey: modelPhotoKey)
-    }
-
-    func clearModelPhoto() {
-        let path = LocalImageView.resolvePath(modelPhotoFilename)
-        try? FileManager.default.removeItem(atPath: path)
-        UserDefaults.standard.removeObject(forKey: modelPhotoKey)
-    }
 
     func clearDeletedItems() {
         let items = PersistenceController.shared.fetchClothingItems(includeDeleted: true).filter { $0.isSoftDeleted }
@@ -265,84 +100,6 @@ class SettingsViewModel: ObservableObject {
                 try? FileManager.default.removeItem(atPath: LocalImageView.resolvePath(path))
             }
             PersistenceController.shared.deleteClothingItem(item, soft: false)
-        }
-    }
-}
-
-// MARK: - API Guide View
-
-struct APIGuideView: View {
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                Group {
-                    Text("如何获取 API Key")
-                        .font(.title3)
-                        .fontWeight(.bold)
-
-                    stepView(number: 1, title: "访问阿里云百炼控制台",
-                             description: "打开 Safari，访问：\nhttps://bailian.console.aliyun.com")
-
-                    stepView(number: 2, title: "登录阿里云账号",
-                             description: "使用阿里云账号登录，若没有账号可免费注册")
-
-                    stepView(number: 3, title: "创建 API Key",
-                             description: "进入控制台后，点击左下角菜单中的「密钥管理」，点击「创建 API Key」")
-
-                    stepView(number: 4, title: "复制并填入",
-                             description: "复制生成的 API Key，粘贴到上方输入框，点击「保存 API Key」即可")
-                }
-                .padding(.horizontal, 16)
-
-                Divider()
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("计费说明")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                    Text("• 自动打标（qwen-vl-plus）：根据实际用量计费\n• 穿搭平铺图 / 虚拟试穿（wan2.6-image）：根据实际用量计费\n• 新用户通常有免费额度可使用")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-
-                    // 可点击的链接
-                    Link(destination: URL(string: "https://bailian.console.aliyun.com/cn-beijing/?tab=app#/api-key")!) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.up.right.square")
-                            Text("直接跳转到 API Key 管理页面")
-                        }
-                        .font(.footnote)
-                        .foregroundColor(.blue)
-                    }
-                    .padding(.top, 4)
-                }
-                .padding(.horizontal, 16)
-            }
-            .padding(.vertical, 16)
-        }
-        .navigationTitle("API Key 指南")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private func stepView(number: Int, title: String, description: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Circle()
-                .fill(AppColors.accent)
-                .frame(width: 24, height: 24)
-                .overlay(
-                    Text("\(number)")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                )
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                Text(description)
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-            }
         }
     }
 }

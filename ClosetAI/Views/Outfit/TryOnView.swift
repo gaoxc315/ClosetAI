@@ -28,12 +28,14 @@ struct TryOnView: View {
         NavigationStack {
             // ── Tab 选择器放在 ScrollView 外面，永远可见 ──
             VStack(spacing: 0) {
-                tabSelector
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
+                if AppFeatures.aiEnabled {
+                    tabSelector
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 8)
 
-                Divider()
+                    Divider()
+                }
 
                 ScrollView {
                     VStack(spacing: 24) {
@@ -73,7 +75,8 @@ struct TryOnView: View {
             }
             .onAppear {
                 var pi: UIImage? = personImage
-                if pi == nil,
+                if AppFeatures.aiEnabled,
+                   pi == nil,
                    let filename = UserDefaults.standard.string(forKey: "closetai.modelPhotoFilename"),
                    let raw = ImageProcessingService.shared.loadImage(from: filename) {
                     pi = centerCrop(raw, to: CGSize(width: 768, height: 1280))
@@ -88,7 +91,9 @@ struct TryOnView: View {
                     if let person = pi {
                         buildComparisonImages(person: person, result: savedResult)
                     }
-                    activeTab = 1 // 直接跳到试穿 tab
+                    if AppFeatures.aiEnabled {
+                        activeTab = 1
+                    }
                 }
             }
             .onChange(of: outfitVM.tryOnResultImage) { _, result in
@@ -210,11 +215,8 @@ struct TryOnView: View {
                     .overlay(
                         VStack(spacing: 12) {
                             ProgressView().scaleEffect(1.2)
-                            Text("AI 正在生成穿搭平铺图...")
+                            Text("正在生成穿搭平铺图...")
                                 .foregroundColor(.secondary)
-                            Text("约 8-10 秒，请稍候")
-                                .font(.caption)
-                                .foregroundColor(Color(.systemGray3))
                         }
                     )
                     .padding(.horizontal, 16)

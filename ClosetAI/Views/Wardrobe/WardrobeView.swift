@@ -39,14 +39,9 @@ struct WardrobeView: View {
     @State private var showAllSectionItems: [ClothingItem] = []
     @State private var showSearch = false
     @State private var itemToDelete: ClothingItem? = nil
-    @State private var showNoAPIKeyAlert = false
     @State private var showManageMembers = false
     @State private var pendingImage: UIImage?
     @State private var showOwnerPicker = false
-
-    private var hasAPIKey: Bool {
-        !(KeychainHelper.load(for: KeychainKey.dashscopeAPIKey) ?? "").isEmpty
-    }
 
     var body: some View {
         NavigationStack {
@@ -119,11 +114,6 @@ struct WardrobeView: View {
                     let memberId = viewModel.memberIdForNewItem
                     Task { await viewModel.processAndAddItem(image: image, memberId: memberId) }
                 }
-            }
-            .alert("请先配置 API Key", isPresented: $showNoAPIKeyAlert) {
-                Button("好的") {}
-            } message: {
-                Text("请先在「设置」页面填写阿里云 DashScope API Key，再上传服装")
             }
             .alert("确认删除？", isPresented: Binding(
                 get: { itemToDelete != nil },
@@ -371,12 +361,12 @@ struct WardrobeView: View {
     private var fabButton: some View {
         Menu {
             Button {
-                if hasAPIKey { showCamera = true } else { showNoAPIKeyAlert = true }
+                showCamera = true
             } label: {
                 Label("拍照", systemImage: "camera")
             }
             Button {
-                if hasAPIKey { showPhotoPicker = true } else { showNoAPIKeyAlert = true }
+                showPhotoPicker = true
             } label: {
                 Label("从相册选择", systemImage: "photo.on.rectangle")
             }
@@ -400,7 +390,7 @@ struct WardrobeView: View {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 .scaleEffect(0.9)
-            Text("AI 正在处理服装...")
+            Text("正在处理服装...")
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundColor(.white)

@@ -248,7 +248,7 @@ class WardrobeViewModel: ObservableObject {
                 throw NSError(domain: "ClosetAI", code: -1, userInfo: [NSLocalizedDescriptionKey: "保存图片失败"])
             }
             var tags = ClothingTags()
-            if let imageData = image.jpegData(compressionQuality: 0.8) {
+            if AppFeatures.aiEnabled, let imageData = image.jpegData(compressionQuality: 0.8) {
                 do { tags = try await aliyunService.autoTagClothing(imageData: imageData) }
                 catch { print("Auto-tag error: \(error)") }
             }

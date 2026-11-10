@@ -292,7 +292,7 @@ struct OutfitDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         collagSection
-                        if outfit.tryOnResultPath != nil {
+                        if AppFeatures.aiEnabled, outfit.tryOnResultPath != nil {
                             tryOnResultSection
                         }
                         itemsSection
@@ -300,7 +300,9 @@ struct OutfitDetailView: View {
                     .padding(.bottom, 16)
                 }
 
-                tryOnButton
+                if AppFeatures.aiEnabled {
+                    tryOnButton
+                }
             }
             .navigationTitle(outfit.name ?? "搭配详情")
             .navigationBarTitleDisplayMode(.inline)
