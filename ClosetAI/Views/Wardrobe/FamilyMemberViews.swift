@@ -14,11 +14,11 @@ struct FamilyMemberBar: View {
                 selection: selectionBinding,
                 onSelect: handleSelect
             )
-            .frame(height: 52)
-            Divider()
+            .frame(height: 56)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
         }
         .zIndex(2)
-        .background(Color(.systemBackground))
     }
 
     private var magnifyItems: [MagnifyingTabItem] {

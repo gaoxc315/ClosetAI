@@ -245,11 +245,11 @@ struct WardrobeView: View {
                 selection: $selectedCategoryName,
                 onSelect: { selectedCategoryName = $0.id }
             )
-            .frame(width: 64)
-            Divider()
+            .frame(width: 72)
+            .padding(.leading, 8)
+            .padding(.vertical, 8)
         }
         .zIndex(2)
-        .background(Color(.systemBackground))
     }
 
     private var categoryMagnifyItems: [MagnifyingTabItem] {

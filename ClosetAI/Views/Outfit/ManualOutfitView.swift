@@ -94,59 +94,67 @@ struct ManualOutfitView: View {
     // MARK: - Member filter
 
     private var memberFilter: some View {
-        VStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    AppTabItem(icon: "square.grid.2x2", title: "全部", selected: filterMember == .all) {
-                        filterMember = .all
-                    }
-                    .frame(width: 64)
-                    ForEach(wardrobeVM.familyMembers) { member in
-                        if let id = member.id {
-                            AppTabItem(
-                                icon: "person",
-                                title: member.name ?? "成员",
-                                selected: filterMember == .member(id)
-                            ) {
-                                filterMember = .member(id)
-                            }
-                            .frame(width: 64)
-                        }
-                    }
-                    AppTabItem(icon: "tray", title: "未分配", selected: filterMember == .unassigned) {
-                        filterMember = .unassigned
-                    }
-                    .frame(width: 64)
-                }
-                .padding(.horizontal, 4)
+        MagnifyingTabBar(
+            items: memberMagnifyItems,
+            selection: memberSelection,
+            onSelect: { applyMemberSelection($0.id) }
+        )
+        .frame(height: 56)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+    }
+
+    private var memberMagnifyItems: [MagnifyingTabItem] {
+        var items = [MagnifyingTabItem(id: "all", icon: "square.grid.2x2", title: "全部")]
+        for member in wardrobeVM.familyMembers {
+            if let id = member.id {
+                items.append(MagnifyingTabItem(id: id.uuidString, icon: "person", title: member.name ?? "成员"))
             }
-            Divider()
         }
-        .background(Color(.systemBackground))
+        items.append(MagnifyingTabItem(id: "unassigned", icon: "tray", title: "未分配"))
+        return items
+    }
+
+    private var memberSelection: Binding<String> {
+        Binding(
+            get: {
+                switch filterMember {
+                case .all: return "all"
+                case .unassigned: return "unassigned"
+                case .member(let id): return id.uuidString
+                }
+            },
+            set: { applyMemberSelection($0) }
+        )
+    }
+
+    private func applyMemberSelection(_ id: String) {
+        switch id {
+        case "all": filterMember = .all
+        case "unassigned": filterMember = .unassigned
+        default:
+            if let uuid = UUID(uuidString: id) {
+                filterMember = .member(uuid)
+            }
+        }
     }
 
     // MARK: - Category filter
 
     private var categoryFilter: some View {
-        VStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    let cats = ["全部"] + ClothingCategory.allCases.map { $0.rawValue }
-                    ForEach(cats, id: \.self) { cat in
-                        AppTabItem(
-                            icon: AppTabIcon.category(cat),
-                            title: cat,
-                            selected: filterCategory == cat
-                        ) {
-                            filterCategory = cat
-                        }
-                        .frame(width: 64)
-                    }
-                }
-                .padding(.horizontal, 4)
-            }
-            .background(Color(.systemBackground))
-            Divider()
+        MagnifyingTabBar(
+            items: categoryMagnifyItems,
+            selection: $filterCategory,
+            onSelect: { filterCategory = $0.id }
+        )
+        .frame(height: 56)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+    }
+
+    private var categoryMagnifyItems: [MagnifyingTabItem] {
+        (["全部"] + ClothingCategory.allCases.map(\.rawValue)).map {
+            MagnifyingTabItem(id: $0, icon: AppTabIcon.category($0), title: $0)
         }
     }
 

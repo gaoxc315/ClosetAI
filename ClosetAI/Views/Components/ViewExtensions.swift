@@ -117,7 +117,7 @@ enum AppTabIcon {
     }
 }
 
-// MARK: - Press-drag tab bar (same interaction as 衣橱 / 穿搭 / 设置)
+// MARK: - Press-drag tab bar (iOS 26 liquid-glass lens, same as 衣橱 / 穿搭 / 设置)
 
 struct MagnifyingTabItem: Identifiable, Equatable {
     let id: String
@@ -141,22 +141,39 @@ struct MagnifyingTabBar: View {
 
     @State private var frames: [String: CGRect] = [:]
     @State private var dragLocation: CGPoint?
+    @State private var isDragging = false
     @State private var hoverId: String?
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            tabStack
-                .coordinateSpace(name: "magnifyTabs")
-                .onPreferenceChange(TabItemFrameKey.self) { frames = $0 }
-                .gesture(dragGesture)
-                .sensoryFeedback(.selection, trigger: hoverId)
-
-            if let dragLocation, let hover = hoveringItem {
-                loupe(for: hover)
-                    .position(loupePosition(at: dragLocation))
-                    .allowsHitTesting(false)
-                    .transition(.scale.combined(with: .opacity))
+        GlassEffectContainer(spacing: 12) {
+            ZStack(alignment: .topLeading) {
+                lens
+                tabStack
             }
+            .coordinateSpace(name: "magnifyTabs")
+            .onPreferenceChange(TabItemFrameKey.self) { frames = $0 }
+            .padding(4)
+            .glassEffect(.regular, in: .rect(cornerRadius: axis == .horizontal ? 22 : 26))
+            .gesture(dragGesture)
+        }
+        .sensoryFeedback(.selection, trigger: hoverId ?? selection)
+    }
+
+    @ViewBuilder
+    private var lens: some View {
+        if let rect = lensRect {
+            Capsule()
+                .fill(.clear)
+                .frame(width: rect.width, height: rect.height)
+                .glassEffect(.regular.interactive(), in: .capsule)
+                .offset(x: rect.minX, y: rect.minY)
+                .animation(
+                    isDragging
+                        ? .interactiveSpring(response: 0.16, dampingFraction: 0.9)
+                        : .spring(response: 0.32, dampingFraction: 0.82),
+                    value: rect
+                )
+                .allowsHitTesting(false)
         }
     }
 
@@ -165,15 +182,13 @@ struct MagnifyingTabBar: View {
         if axis == .horizontal {
             HStack(spacing: 0) {
                 ForEach(items) { item in
-                    tabCell(item)
-                        .frame(maxWidth: .infinity)
+                    tabCell(item).frame(maxWidth: .infinity)
                 }
             }
         } else {
             VStack(spacing: 0) {
                 ForEach(items) { item in
-                    tabCell(item)
-                        .frame(maxHeight: .infinity)
+                    tabCell(item).frame(maxHeight: .infinity)
                 }
             }
         }
@@ -181,21 +196,23 @@ struct MagnifyingTabBar: View {
 
     private func tabCell(_ item: MagnifyingTabItem) -> some View {
         let selected = selection == item.id && !item.isAction
-        let scale = magnification(for: item.id)
         return VStack(spacing: 3) {
             Image(systemName: item.icon)
                 .font(.system(size: 22))
                 .symbolVariant(selected ? .fill : .none)
-            Text(item.title)
-                .font(.system(size: 10))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .symbolEffect(.bounce, value: selected)
+            if !isDragging {
+                Text(item.title)
+                    .font(.system(size: 10))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .transition(.opacity.combined(with: .scale(scale: 0.85)))
+            }
         }
         .foregroundStyle(selected ? AppColors.accent : Color(.systemGray))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.top, 6)
-        .padding(.bottom, 4)
-        .scaleEffect(scale, anchor: .center)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
         .contentShape(Rectangle())
         .background(
             GeometryReader { geo in
@@ -205,14 +222,18 @@ struct MagnifyingTabBar: View {
                 )
             }
         )
-        .onTapGesture {
-            select(item, commitAction: true)
-        }
+        .onTapGesture { select(item, commitAction: true) }
     }
 
     private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 4, coordinateSpace: .named("magnifyTabs"))
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("magnifyTabs"))
             .onChanged { value in
+                let moved = hypot(value.translation.width, value.translation.height) > 6
+                if moved, !isDragging {
+                    withAnimation(.easeInOut(duration: 0.16)) {
+                        isDragging = true
+                    }
+                }
                 dragLocation = value.location
                 if let item = item(at: value.location) {
                     hoverId = item.id
@@ -220,10 +241,11 @@ struct MagnifyingTabBar: View {
                 }
             }
             .onEnded { value in
-                if let item = item(at: value.location) ?? hoveringItem {
+                if let item = item(at: value.location) ?? items.first(where: { $0.id == hoverId }) {
                     select(item, commitAction: true)
                 }
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                    isDragging = false
                     dragLocation = nil
                     hoverId = nil
                 }
@@ -241,18 +263,11 @@ struct MagnifyingTabBar: View {
         }
     }
 
-    private var hoveringItem: MagnifyingTabItem? {
-        items.first(where: { $0.id == hoverId })
-    }
-
     private func item(at point: CGPoint) -> MagnifyingTabItem? {
-        let hit = frames.first { $0.value.insetBy(dx: -4, dy: -4).contains(point) }?.key
-        if let hit { return items.first(where: { $0.id == hit }) }
-        return nearestItem(to: point)
-    }
-
-    private func nearestItem(to point: CGPoint) -> MagnifyingTabItem? {
-        frames.min { a, b in
+        if let hit = frames.first(where: { $0.value.insetBy(dx: -2, dy: -2).contains(point) })?.key {
+            return items.first(where: { $0.id == hit })
+        }
+        return frames.min { a, b in
             let da = axis == .horizontal ? abs(a.value.midX - point.x) : abs(a.value.midY - point.y)
             let db = axis == .horizontal ? abs(b.value.midX - point.x) : abs(b.value.midY - point.y)
             return da < db
@@ -260,39 +275,31 @@ struct MagnifyingTabBar: View {
         .flatMap { id, _ in items.first(where: { $0.id == id }) }
     }
 
-    private func magnification(for id: String) -> CGFloat {
-        guard let dragLocation, let frame = frames[id] else { return 1 }
-        let delta = axis == .horizontal
-            ? abs(frame.midX - dragLocation.x)
-            : abs(frame.midY - dragLocation.y)
-        let sigma: CGFloat = 42
-        let influence = exp(-0.5 * pow(delta / sigma, 2))
-        return 1 + 0.55 * influence
+    private var lensRect: CGRect? {
+        if isDragging, let loc = dragLocation, let nearest = nearestFrame(to: loc) {
+            if axis == .horizontal {
+                let extra = min(abs(loc.x - nearest.midX) * 0.45, 22)
+                let width = nearest.width + extra
+                let height = max(nearest.height - 8, 36)
+                return CGRect(x: loc.x - width / 2, y: nearest.minY + 4, width: width, height: height)
+            } else {
+                let extra = min(abs(loc.y - nearest.midY) * 0.45, 22)
+                let height = nearest.height + extra
+                let width = max(nearest.width - 8, 40)
+                return CGRect(x: nearest.minX + 4, y: loc.y - height / 2, width: width, height: height)
+            }
+        }
+        if let frame = frames[selection] {
+            return frame.insetBy(dx: 3, dy: 4)
+        }
+        return nil
     }
 
-    private func loupePosition(at location: CGPoint) -> CGPoint {
-        if axis == .horizontal {
-            return CGPoint(x: location.x, y: location.y + 70)
-        }
-        return CGPoint(x: location.x + 64, y: location.y)
-    }
-
-    private func loupe(for item: MagnifyingTabItem) -> some View {
-        VStack(spacing: 6) {
-            Image(systemName: item.icon)
-                .font(.system(size: 36, weight: .regular))
-                .symbolVariant(.fill)
-            Text(item.title)
-                .font(.system(size: 12, weight: .semibold))
-        }
-        .foregroundStyle(AppColors.accent)
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.white.opacity(0.35), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.16), radius: 14, y: 8)
+    private func nearestFrame(to point: CGPoint) -> CGRect? {
+        frames.min { a, b in
+            let da = axis == .horizontal ? abs(a.value.midX - point.x) : abs(a.value.midY - point.y)
+            let db = axis == .horizontal ? abs(b.value.midX - point.x) : abs(b.value.midY - point.y)
+            return da < db
+        }?.value
     }
 }
