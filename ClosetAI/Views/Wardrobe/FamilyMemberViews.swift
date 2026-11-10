@@ -7,53 +7,58 @@ struct FamilyMemberBar: View {
     var onManage: () -> Void = {}
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                chip(title: "全部", selected: viewModel.selectedFilter == .all) {
-                    viewModel.selectFilter(.all)
-                }
-                ForEach(viewModel.familyMembers) { member in
-                    if let id = member.id {
-                        chip(
-                            title: member.name ?? "成员",
-                            selected: viewModel.selectedFilter == .member(id)
-                        ) {
-                            viewModel.selectFilter(.member(id))
-                        }
+        VStack(spacing: 0) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 0) { tabItems }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 0) {
+                        tabItems
                     }
-                }
-                if showsUnassigned {
-                    chip(title: "未分配", selected: viewModel.selectedFilter == .unassigned) {
-                        viewModel.selectFilter(.unassigned)
-                    }
-                }
-                if showsManage {
-                    Button(action: onManage) {
-                        Label("管理", systemImage: "person.badge.plus")
-                            .font(.subheadline)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(Color(.systemGray6))
-                            .foregroundColor(AppColors.accent)
-                            .clipShape(Capsule())
-                    }
+                    .padding(.horizontal, 4)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            Divider()
         }
         .background(Color(.systemBackground))
     }
 
-    private func chip(title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(selected ? AppColors.accent : Color(.systemGray6))
-                .foregroundColor(selected ? .white : .primary)
-                .clipShape(Capsule())
+    @ViewBuilder
+    private var tabItems: some View {
+        AppTabItem(
+            icon: "square.grid.2x2",
+            title: "全部",
+            selected: viewModel.selectedFilter == .all
+        ) {
+            viewModel.selectFilter(.all)
+        }
+        ForEach(viewModel.familyMembers) { member in
+            if let id = member.id {
+                AppTabItem(
+                    icon: "person",
+                    title: member.name ?? "成员",
+                    selected: viewModel.selectedFilter == .member(id)
+                ) {
+                    viewModel.selectFilter(.member(id))
+                }
+            }
+        }
+        if showsUnassigned {
+            AppTabItem(
+                icon: "tray",
+                title: "未分配",
+                selected: viewModel.selectedFilter == .unassigned
+            ) {
+                viewModel.selectFilter(.unassigned)
+            }
+        }
+        if showsManage {
+            AppTabItem(
+                icon: "person.badge.plus",
+                title: "管理",
+                selected: false
+            ) {
+                onManage()
+            }
         }
     }
 }

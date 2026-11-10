@@ -94,35 +94,35 @@ struct ManualOutfitView: View {
     // MARK: - Member filter
 
     private var memberFilter: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                memberChip("全部", .all)
-                ForEach(wardrobeVM.familyMembers) { member in
-                    if let id = member.id {
-                        memberChip(member.name ?? "成员", .member(id))
+        VStack(spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    AppTabItem(icon: "square.grid.2x2", title: "全部", selected: filterMember == .all) {
+                        filterMember = .all
                     }
+                    .frame(width: 64)
+                    ForEach(wardrobeVM.familyMembers) { member in
+                        if let id = member.id {
+                            AppTabItem(
+                                icon: "person",
+                                title: member.name ?? "成员",
+                                selected: filterMember == .member(id)
+                            ) {
+                                filterMember = .member(id)
+                            }
+                            .frame(width: 64)
+                        }
+                    }
+                    AppTabItem(icon: "tray", title: "未分配", selected: filterMember == .unassigned) {
+                        filterMember = .unassigned
+                    }
+                    .frame(width: 64)
                 }
-                memberChip("未分配", .unassigned)
+                .padding(.horizontal, 4)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .padding(.bottom, 4)
+            Divider()
         }
         .background(Color(.systemBackground))
-    }
-
-    private func memberChip(_ title: String, _ filter: FamilyFilter) -> some View {
-        Button {
-            filterMember = filter
-        } label: {
-            Text(title)
-                .font(.caption)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(filterMember == filter ? AppColors.accent : Color(.systemGray6))
-                .foregroundColor(filterMember == filter ? .white : .primary)
-                .clipShape(Capsule())
-        }
     }
 
     // MARK: - Category filter
@@ -130,24 +130,20 @@ struct ManualOutfitView: View {
     private var categoryFilter: some View {
         VStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 0) {
                     let cats = ["全部"] + ClothingCategory.allCases.map { $0.rawValue }
                     ForEach(cats, id: \.self) { cat in
-                        Button {
+                        AppTabItem(
+                            icon: AppTabIcon.category(cat),
+                            title: cat,
+                            selected: filterCategory == cat
+                        ) {
                             filterCategory = cat
-                        } label: {
-                            Text(cat)
-                                .font(.subheadline)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 7)
-                                .background(filterCategory == cat ? AppColors.accent : Color(.systemGray6))
-                                .foregroundColor(filterCategory == cat ? .white : .primary)
-                                .clipShape(Capsule())
                         }
+                        .frame(width: 64)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 4)
             }
             .background(Color(.systemBackground))
             Divider()

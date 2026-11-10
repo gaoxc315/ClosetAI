@@ -67,3 +67,52 @@ extension View {
         modifier(ErrorToastModifier(message: message))
     }
 }
+
+// MARK: - Tab-style item (matches 衣橱 / 穿搭 / 设置)
+
+struct AppTabItem: View {
+    let icon: String
+    let title: String
+    var selected: Bool = false
+    var action: () -> Void
+
+    var body: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                action()
+            }
+        } label: {
+            VStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.system(size: 22))
+                    .symbolVariant(selected ? .fill : .none)
+                Text(title)
+                    .font(.system(size: 10))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(selected ? AppColors.accent : Color(.systemGray))
+            .frame(minWidth: 56, maxWidth: .infinity)
+            .padding(.top, 6)
+            .padding(.bottom, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+enum AppTabIcon {
+    static func category(_ name: String) -> String {
+        switch name {
+        case "全部": return "square.grid.2x2"
+        case "上装": return "tshirt"
+        case "外套": return "jacket"
+        case "连衣裙": return "figure.stand.dress"
+        case "下装": return "rectangle.split.1x2"
+        case "鞋子": return "shoe"
+        case "包包": return "bag"
+        case "配饰": return "sparkle"
+        default: return "ellipsis.circle"
+        }
+    }
+}

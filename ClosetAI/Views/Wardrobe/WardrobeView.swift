@@ -82,6 +82,8 @@ struct WardrobeView: View {
                                 }
                             }
                             .padding(.bottom, 100)
+                            .animation(.easeInOut(duration: 0.2), value: selectedCategoryName)
+                            .animation(.easeInOut(duration: 0.2), value: viewModel.selectedFilter)
                         }
                         .scrollDismissesKeyboard(.immediately)
                     }
@@ -236,64 +238,33 @@ struct WardrobeView: View {
     // MARK: - Category Rail
 
     private var categoryRail: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 4) {
-                categoryRailButton(name: "全部", icon: "square.grid.2x2", count: viewModel.filteredItems.count)
-                ForEach(CategorySection.all, id: \.name) { section in
-                    categoryRailButton(
-                        name: section.name,
-                        icon: iconName(for: section.name),
-                        count: items(forCategoryName: section.name).count
-                    )
+        HStack(spacing: 0) {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 2) {
+                    AppTabItem(
+                        icon: AppTabIcon.category("全部"),
+                        title: "全部",
+                        selected: selectedCategoryName == "全部"
+                    ) {
+                        selectedCategoryName = "全部"
+                    }
+                    ForEach(CategorySection.all, id: \.name) { section in
+                        AppTabItem(
+                            icon: AppTabIcon.category(section.name),
+                            title: section.name,
+                            selected: selectedCategoryName == section.name
+                        ) {
+                            selectedCategoryName = section.name
+                        }
+                    }
                 }
+                .padding(.top, 4)
+                .padding(.bottom, 80)
             }
-            .padding(.vertical, 8)
-            .padding(.bottom, 80)
+            .frame(width: 64)
+            Divider()
         }
-        .frame(width: 68)
         .background(Color(.systemBackground))
-    }
-
-    private func categoryRailButton(name: String, icon: String, count: Int) -> some View {
-        let selected = selectedCategoryName == name
-        return Button {
-            selectedCategoryName = name
-        } label: {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: selected ? .semibold : .regular))
-                Text(name)
-                    .font(.system(size: 11, weight: selected ? .semibold : .regular))
-                    .lineLimit(1)
-                if count > 0 {
-                    Text("\(count)")
-                        .font(.system(size: 9))
-                        .foregroundColor(selected ? AppColors.accent.opacity(0.85) : .secondary)
-                }
-            }
-            .foregroundColor(selected ? AppColors.accent : .secondary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(selected ? AppColors.accent.opacity(0.12) : Color.clear)
-            )
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 6)
-    }
-
-    private func iconName(for category: String) -> String {
-        switch category {
-        case "上装": return "tshirt"
-        case "外套": return "jacket"
-        case "连衣裙": return "figure.stand.dress"
-        case "下装": return "rectangle.split.1x2"
-        case "鞋子": return "shoe"
-        case "包包": return "bag"
-        case "配饰": return "sparkle"
-        default: return "ellipsis.circle"
-        }
     }
 
     // MARK: - Category Grid (always 3 columns)
