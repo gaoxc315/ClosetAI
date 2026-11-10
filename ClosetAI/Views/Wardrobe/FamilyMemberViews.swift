@@ -8,56 +8,67 @@ struct FamilyMemberBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 0) { tabItems }
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 0) {
-                        tabItems
-                    }
-                    .padding(.horizontal, 4)
-                }
-            }
+            MagnifyingTabBar(
+                items: magnifyItems,
+                axis: .horizontal,
+                selection: selectionBinding,
+                onSelect: handleSelect
+            )
+            .frame(height: 52)
             Divider()
         }
+        .zIndex(2)
         .background(Color(.systemBackground))
     }
 
-    @ViewBuilder
-    private var tabItems: some View {
-        AppTabItem(
-            icon: "square.grid.2x2",
-            title: "全部",
-            selected: viewModel.selectedFilter == .all
-        ) {
-            viewModel.selectFilter(.all)
-        }
-        ForEach(viewModel.familyMembers) { member in
+    private var magnifyItems: [MagnifyingTabItem] {
+        var items = [MagnifyingTabItem(id: "all", icon: "square.grid.2x2", title: "全部")]
+        for member in viewModel.familyMembers {
             if let id = member.id {
-                AppTabItem(
-                    icon: "person",
-                    title: member.name ?? "成员",
-                    selected: viewModel.selectedFilter == .member(id)
-                ) {
-                    viewModel.selectFilter(.member(id))
-                }
+                items.append(MagnifyingTabItem(id: id.uuidString, icon: "person", title: member.name ?? "成员"))
             }
         }
         if showsUnassigned {
-            AppTabItem(
-                icon: "tray",
-                title: "未分配",
-                selected: viewModel.selectedFilter == .unassigned
-            ) {
-                viewModel.selectFilter(.unassigned)
-            }
+            items.append(MagnifyingTabItem(id: "unassigned", icon: "tray", title: "未分配"))
         }
         if showsManage {
-            AppTabItem(
-                icon: "person.badge.plus",
-                title: "管理",
-                selected: false
-            ) {
-                onManage()
+            items.append(MagnifyingTabItem(id: "manage", icon: "person.badge.plus", title: "管理", isAction: true))
+        }
+        return items
+    }
+
+    private var selectionBinding: Binding<String> {
+        Binding(
+            get: {
+                switch viewModel.selectedFilter {
+                case .all: return "all"
+                case .unassigned: return "unassigned"
+                case .member(let id): return id.uuidString
+                }
+            },
+            set: { newValue in
+                applySelection(newValue)
+            }
+        )
+    }
+
+    private func handleSelect(_ item: MagnifyingTabItem) {
+        if item.isAction {
+            onManage()
+            return
+        }
+        applySelection(item.id)
+    }
+
+    private func applySelection(_ id: String) {
+        switch id {
+        case "all":
+            viewModel.selectFilter(.all)
+        case "unassigned":
+            viewModel.selectFilter(.unassigned)
+        default:
+            if let uuid = UUID(uuidString: id) {
+                viewModel.selectFilter(.member(uuid))
             }
         }
     }

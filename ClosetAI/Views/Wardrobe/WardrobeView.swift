@@ -239,32 +239,24 @@ struct WardrobeView: View {
 
     private var categoryRail: some View {
         HStack(spacing: 0) {
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 2) {
-                    AppTabItem(
-                        icon: AppTabIcon.category("全部"),
-                        title: "全部",
-                        selected: selectedCategoryName == "全部"
-                    ) {
-                        selectedCategoryName = "全部"
-                    }
-                    ForEach(CategorySection.all, id: \.name) { section in
-                        AppTabItem(
-                            icon: AppTabIcon.category(section.name),
-                            title: section.name,
-                            selected: selectedCategoryName == section.name
-                        ) {
-                            selectedCategoryName = section.name
-                        }
-                    }
-                }
-                .padding(.top, 4)
-                .padding(.bottom, 80)
-            }
+            MagnifyingTabBar(
+                items: categoryMagnifyItems,
+                axis: .vertical,
+                selection: $selectedCategoryName,
+                onSelect: { selectedCategoryName = $0.id }
+            )
             .frame(width: 64)
             Divider()
         }
+        .zIndex(2)
         .background(Color(.systemBackground))
+    }
+
+    private var categoryMagnifyItems: [MagnifyingTabItem] {
+        [MagnifyingTabItem(id: "全部", icon: AppTabIcon.category("全部"), title: "全部")]
+            + CategorySection.all.map {
+                MagnifyingTabItem(id: $0.name, icon: AppTabIcon.category($0.name), title: $0.name)
+            }
     }
 
     // MARK: - Category Grid (always 3 columns)
