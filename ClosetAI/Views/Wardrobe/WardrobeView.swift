@@ -42,6 +42,7 @@ struct WardrobeView: View {
     @State private var showManageMembers = false
     @State private var pendingImage: UIImage?
     @State private var showOwnerPicker = false
+    @State private var selectedCategoryName: String = "全部"
 
     var body: some View {
         NavigationStack {
@@ -60,26 +61,34 @@ struct WardrobeView: View {
                         }
                     }
 
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            // Stats bar
-                            if viewModel.searchText.isEmpty {
-                                statsBar
-                                    .padding(.horizontal, 16)
-                                    .padding(.top, 8)
-                                    .padding(.bottom, 4)
-                            }
-
-                            // Content: search results or section layout
-                            if viewModel.searchText.isEmpty {
-                                sectionLayout
-                            } else {
-                                searchContent
-                            }
+                    HStack(spacing: 0) {
+                        if viewModel.searchText.isEmpty {
+                            categoryRail
                         }
-                        .padding(.bottom, 100) // Space for FAB
+
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                if viewModel.searchText.isEmpty {
+                                    statsBar
+                                        .padding(.horizontal, 12)
+                                        .padding(.top, 8)
+                                        .padding(.bottom, 4)
+                                }
+
+                                if viewModel.searchText.isEmpty {
+                                    if selectedCategoryName == "全部" {
+                                        sectionLayout
+                                    } else {
+                                        categoryGrid
+                                    }
+                                } else {
+                                    searchContent
+                                }
+                            }
+                            .padding(.bottom, 100)
+                        }
+                        .scrollDismissesKeyboard(.immediately)
                     }
-                    .scrollDismissesKeyboard(.immediately)
                 }
 
                 // Loading toast
@@ -184,25 +193,144 @@ struct WardrobeView: View {
 
     private var statsBar: some View {
         HStack(spacing: 5) {
-            Text("共 \(viewModel.scopedCount) 件")
+            Text("共 \(visibleItemCount) 件")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
             Text("·")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
             Button {
-                let idleItems = viewModel.filteredItems.filter {
+                let idleItems = itemsForSelectedCategory.filter {
                     viewModel.idleItemIDs.contains($0.id ?? UUID())
                 }
                 showAllSectionItems = idleItems
                 showAllSectionTitle = "未搭配"
             } label: {
-                Text("未搭配 \(viewModel.idleCount) 件")
+                Text("未搭配 \(visibleIdleCount) 件")
                     .font(.system(size: 12))
-                    .foregroundColor(viewModel.idleCount > 0 ? AppColors.idle : .secondary)
+                    .foregroundColor(visibleIdleCount > 0 ? AppColors.idle : .secondary)
             }
-            .disabled(viewModel.idleCount == 0)
+            .disabled(visibleIdleCount == 0)
             Spacer()
+        }
+    }
+
+    private var visibleItemCount: Int {
+        itemsForSelectedCategory.count
+    }
+
+    private var visibleIdleCount: Int {
+        itemsForSelectedCategory.filter { viewModel.idleItemIDs.contains($0.id ?? UUID()) }.count
+    }
+
+    private var itemsForSelectedCategory: [ClothingItem] {
+        items(forCategoryName: selectedCategoryName)
+    }
+
+    private func items(forCategoryName name: String) -> [ClothingItem] {
+        guard let section = CategorySection.all.first(where: { $0.name == name }) else {
+            return viewModel.filteredItems
+        }
+        if section.isOther {
+            return viewModel.otherItems(excludingCategories: CategorySection.standardCategories)
+        }
+        return viewModel.items(inCategories: section.categories)
+    }
+
+    // MARK: - Category Rail
+
+    private var categoryRail: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 4) {
+                categoryRailButton(name: "全部", icon: "square.grid.2x2", count: viewModel.filteredItems.count)
+                ForEach(CategorySection.all, id: \.name) { section in
+                    categoryRailButton(
+                        name: section.name,
+                        icon: iconName(for: section.name),
+                        count: items(forCategoryName: section.name).count
+                    )
+                }
+            }
+            .padding(.vertical, 8)
+            .padding(.bottom, 80)
+        }
+        .frame(width: 68)
+        .background(Color(.systemBackground))
+    }
+
+    private func categoryRailButton(name: String, icon: String, count: Int) -> some View {
+        let selected = selectedCategoryName == name
+        return Button {
+            selectedCategoryName = name
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: selected ? .semibold : .regular))
+                Text(name)
+                    .font(.system(size: 11, weight: selected ? .semibold : .regular))
+                    .lineLimit(1)
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.system(size: 9))
+                        .foregroundColor(selected ? AppColors.accent.opacity(0.85) : .secondary)
+                }
+            }
+            .foregroundColor(selected ? AppColors.accent : .secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(selected ? AppColors.accent.opacity(0.12) : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 6)
+    }
+
+    private func iconName(for category: String) -> String {
+        switch category {
+        case "上装": return "tshirt"
+        case "外套": return "jacket"
+        case "连衣裙": return "figure.stand.dress"
+        case "下装": return "rectangle.split.1x2"
+        case "鞋子": return "shoe"
+        case "包包": return "bag"
+        case "配饰": return "sparkle"
+        default: return "ellipsis.circle"
+        }
+    }
+
+    // MARK: - Category Grid
+
+    private var categoryGrid: some View {
+        Group {
+            if itemsForSelectedCategory.isEmpty {
+                emptyStateView
+            } else {
+                let columns = [
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10)
+                ]
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(itemsForSelectedCategory) { item in
+                        ClothingItemCard(
+                            item: item,
+                            isIdle: viewModel.idleItemIDs.contains(item.id ?? UUID())
+                        )
+                        .frame(maxWidth: .infinity)
+                        .onTapGesture { selectedItem = item }
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                itemToDelete = item
+                            } label: {
+                                Label("删除单品", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+            }
         }
     }
 
@@ -345,6 +473,9 @@ struct WardrobeView: View {
     }
 
     private var emptyTitle: String {
+        if selectedCategoryName != "全部" {
+            return "没有\(selectedCategoryName)"
+        }
         switch viewModel.selectedFilter {
         case .all:
             return "衣橱还是空的"
