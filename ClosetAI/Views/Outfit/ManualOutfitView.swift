@@ -99,9 +99,6 @@ struct ManualOutfitView: View {
             selection: memberSelection,
             onSelect: { applyMemberSelection($0.id) }
         )
-        .frame(height: 56)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
     }
 
     private var memberMagnifyItems: [MagnifyingTabItem] {
@@ -147,9 +144,6 @@ struct ManualOutfitView: View {
             selection: $filterCategory,
             onSelect: { filterCategory = $0.id }
         )
-        .frame(height: 56)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
     }
 
     private var categoryMagnifyItems: [MagnifyingTabItem] {

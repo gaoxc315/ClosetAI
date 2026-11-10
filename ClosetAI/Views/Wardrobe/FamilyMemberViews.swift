@@ -10,13 +10,9 @@ struct FamilyMemberBar: View {
         VStack(spacing: 0) {
             MagnifyingTabBar(
                 items: magnifyItems,
-                axis: .horizontal,
                 selection: selectionBinding,
                 onSelect: handleSelect
             )
-            .frame(height: 56)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
         }
         .zIndex(2)
     }

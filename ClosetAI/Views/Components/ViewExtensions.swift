@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Keyboard Dismiss Helper
 
@@ -117,7 +118,7 @@ enum AppTabIcon {
     }
 }
 
-// MARK: - Press-drag tab bar (iOS 26 liquid-glass lens, same as 衣橱 / 穿搭 / 设置)
+// MARK: - System tab bar (real UITabBar = same liquid-glass lens as 衣橱 / 穿搭 / 设置)
 
 struct MagnifyingTabItem: Identifiable, Equatable {
     let id: String
@@ -126,135 +127,63 @@ struct MagnifyingTabItem: Identifiable, Equatable {
     var isAction: Bool = false
 }
 
-private struct TabItemFrameKey: PreferenceKey {
-    static var defaultValue: [String: CGRect] = [:]
-    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
-        value.merge(nextValue(), uniquingKeysWith: { $1 })
-    }
-}
-
 struct MagnifyingTabBar: View {
     let items: [MagnifyingTabItem]
-    var axis: Axis = .horizontal
     @Binding var selection: String
     var onSelect: (MagnifyingTabItem) -> Void
 
-    @State private var frames: [String: CGRect] = [:]
-    @State private var dragLocation: CGPoint?
-    @State private var isDragging = false
-    @State private var hoverId: String?
-
     var body: some View {
-        GlassEffectContainer(spacing: 12) {
-            ZStack(alignment: .topLeading) {
-                lens
-                tabStack
-            }
-            .coordinateSpace(name: "magnifyTabs")
-            .onPreferenceChange(TabItemFrameKey.self) { frames = $0 }
-            .padding(4)
-            .glassEffect(.regular, in: .rect(cornerRadius: axis == .horizontal ? 22 : 26))
-            .gesture(dragGesture)
-        }
-        .sensoryFeedback(.selection, trigger: hoverId ?? selection)
+        SystemTabBar(items: items, selection: $selection, onSelect: onSelect)
+            // Lens overflows the bar by a few points, same as the root tab bar.
+            .padding(.vertical, 10)
+    }
+}
+
+private struct SystemTabBar: UIViewRepresentable {
+    var items: [MagnifyingTabItem]
+    @Binding var selection: String
+    var onSelect: (MagnifyingTabItem) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
     }
 
-    @ViewBuilder
-    private var lens: some View {
-        if let rect = lensRect {
-            Capsule()
-                .fill(.clear)
-                .frame(width: rect.width, height: rect.height)
-                .glassEffect(.regular.interactive(), in: .capsule)
-                .offset(x: rect.minX, y: rect.minY)
-                .animation(
-                    isDragging
-                        ? .interactiveSpring(response: 0.16, dampingFraction: 0.9)
-                        : .spring(response: 0.32, dampingFraction: 0.82),
-                    value: rect
-                )
-                .allowsHitTesting(false)
+    func makeUIView(context: Context) -> SystemTabBarView {
+        let view = SystemTabBarView()
+        view.tabBar.delegate = context.coordinator
+        view.tabBar.tintColor = UIColor(AppColors.accent)
+        view.tabBar.unselectedItemTintColor = .systemGray
+        view.tabBar.isTranslucent = true
+        view.tabBar.backgroundColor = .clear
+        context.coordinator.onSelect = { item, bar in
+            handleSelect(item, bar: bar)
         }
+        context.coordinator.sync(view.tabBar, items: items, selection: selection)
+        view.itemCount = items.count
+        return view
     }
 
-    @ViewBuilder
-    private var tabStack: some View {
-        if axis == .horizontal {
-            HStack(spacing: 0) {
-                ForEach(items) { item in
-                    tabCell(item).frame(maxWidth: .infinity)
-                }
-            }
-        } else {
-            VStack(spacing: 0) {
-                ForEach(items) { item in
-                    tabCell(item).frame(maxHeight: .infinity)
-                }
-            }
+    func updateUIView(_ view: SystemTabBarView, context: Context) {
+        context.coordinator.onSelect = { item, bar in
+            handleSelect(item, bar: bar)
         }
+        context.coordinator.sync(view.tabBar, items: items, selection: selection)
+        view.itemCount = items.count
+        view.setNeedsLayout()
     }
 
-    private func tabCell(_ item: MagnifyingTabItem) -> some View {
-        let selected = selection == item.id && !item.isAction
-        return VStack(spacing: 3) {
-            Image(systemName: item.icon)
-                .font(.system(size: 22))
-                .symbolVariant(selected ? .fill : .none)
-                .symbolEffect(.bounce, value: selected)
-            if !isDragging {
-                Text(item.title)
-                    .font(.system(size: 10))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .transition(.opacity.combined(with: .scale(scale: 0.85)))
-            }
-        }
-        .foregroundStyle(selected ? AppColors.accent : Color(.systemGray))
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.top, 8)
-        .padding(.bottom, 6)
-        .contentShape(Rectangle())
-        .background(
-            GeometryReader { geo in
-                Color.clear.preference(
-                    key: TabItemFrameKey.self,
-                    value: [item.id: geo.frame(in: .named("magnifyTabs"))]
-                )
-            }
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: SystemTabBarView, context: Context) -> CGSize? {
+        let width = proposal.width ?? uiView.bounds.width
+        let fitting = uiView.tabBar.sizeThatFits(
+            CGSize(width: width, height: UIView.layoutFittingCompressedSize.height)
         )
-        .onTapGesture { select(item, commitAction: true) }
+        return CGSize(width: width, height: max(fitting.height, 49))
     }
 
-    private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .named("magnifyTabs"))
-            .onChanged { value in
-                let moved = hypot(value.translation.width, value.translation.height) > 6
-                if moved, !isDragging {
-                    withAnimation(.easeInOut(duration: 0.16)) {
-                        isDragging = true
-                    }
-                }
-                dragLocation = value.location
-                if let item = item(at: value.location) {
-                    hoverId = item.id
-                    select(item, commitAction: false)
-                }
-            }
-            .onEnded { value in
-                if let item = item(at: value.location) ?? items.first(where: { $0.id == hoverId }) {
-                    select(item, commitAction: true)
-                }
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                    isDragging = false
-                    dragLocation = nil
-                    hoverId = nil
-                }
-            }
-    }
-
-    private func select(_ item: MagnifyingTabItem, commitAction: Bool) {
+    private func handleSelect(_ item: MagnifyingTabItem, bar: UITabBar) {
         if item.isAction {
-            if commitAction { onSelect(item) }
+            restoreSelection(on: bar)
+            onSelect(item)
             return
         }
         if selection != item.id {
@@ -263,43 +192,78 @@ struct MagnifyingTabBar: View {
         }
     }
 
-    private func item(at point: CGPoint) -> MagnifyingTabItem? {
-        if let hit = frames.first(where: { $0.value.insetBy(dx: -2, dy: -2).contains(point) })?.key {
-            return items.first(where: { $0.id == hit })
-        }
-        return frames.min { a, b in
-            let da = axis == .horizontal ? abs(a.value.midX - point.x) : abs(a.value.midY - point.y)
-            let db = axis == .horizontal ? abs(b.value.midX - point.x) : abs(b.value.midY - point.y)
-            return da < db
-        }
-        .flatMap { id, _ in items.first(where: { $0.id == id }) }
+    private func restoreSelection(on bar: UITabBar) {
+        guard let index = items.firstIndex(where: { $0.id == selection }),
+              let uiItems = bar.items,
+              uiItems.indices.contains(index)
+        else { return }
+        bar.selectedItem = uiItems[index]
     }
 
-    private var lensRect: CGRect? {
-        if isDragging, let loc = dragLocation, let nearest = nearestFrame(to: loc) {
-            if axis == .horizontal {
-                let extra = min(abs(loc.x - nearest.midX) * 0.45, 22)
-                let width = nearest.width + extra
-                let height = max(nearest.height - 8, 36)
-                return CGRect(x: loc.x - width / 2, y: nearest.minY + 4, width: width, height: height)
-            } else {
-                let extra = min(abs(loc.y - nearest.midY) * 0.45, 22)
-                let height = nearest.height + extra
-                let width = max(nearest.width - 8, 40)
-                return CGRect(x: nearest.minX + 4, y: loc.y - height / 2, width: width, height: height)
+    final class Coordinator: NSObject, UITabBarDelegate {
+        var itemIDs: [String] = []
+        var items: [MagnifyingTabItem] = []
+        var onSelect: ((MagnifyingTabItem, UITabBar) -> Void)?
+
+        func sync(_ bar: UITabBar, items: [MagnifyingTabItem], selection: String) {
+            self.items = items
+            let ids = items.map(\.id)
+            if ids != itemIDs {
+                bar.items = items.enumerated().map { index, item in
+                    let uiItem = UITabBarItem(
+                        title: item.title,
+                        image: UIImage(systemName: item.icon),
+                        selectedImage: UIImage(systemName: item.icon)
+                    )
+                    uiItem.tag = index
+                    return uiItem
+                }
+                itemIDs = ids
+            }
+            if let index = items.firstIndex(where: { $0.id == selection && !$0.isAction }),
+               let uiItems = bar.items,
+               uiItems.indices.contains(index) {
+                bar.selectedItem = uiItems[index]
             }
         }
-        if let frame = frames[selection] {
-            return frame.insetBy(dx: 3, dy: 4)
+
+        func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
+            let index = item.tag
+            guard items.indices.contains(index) else { return }
+            onSelect?(items[index], tabBar)
         }
-        return nil
+    }
+}
+
+final class SystemTabBarView: UIView {
+    let tabBar = UITabBar()
+    let scrollView = UIScrollView()
+    var itemCount = 0
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .clear
+        clipsToBounds = false
+        scrollView.backgroundColor = .clear
+        scrollView.clipsToBounds = false
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.alwaysBounceHorizontal = false
+        tabBar.clipsToBounds = false
+        addSubview(scrollView)
+        scrollView.addSubview(tabBar)
     }
 
-    private func nearestFrame(to point: CGPoint) -> CGRect? {
-        frames.min { a, b in
-            let da = axis == .horizontal ? abs(a.value.midX - point.x) : abs(a.value.midY - point.y)
-            let db = axis == .horizontal ? abs(b.value.midX - point.x) : abs(b.value.midY - point.y)
-            return da < db
-        }?.value
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        scrollView.frame = bounds
+        let needed = CGFloat(max(itemCount, 1)) * 64
+        let width = max(bounds.width, needed)
+        tabBar.frame = CGRect(x: 0, y: 0, width: width, height: bounds.height)
+        scrollView.contentSize = CGSize(width: width, height: bounds.height)
+        scrollView.isScrollEnabled = needed > bounds.width + 1
     }
 }
