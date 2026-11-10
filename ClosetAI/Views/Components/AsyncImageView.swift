@@ -47,33 +47,33 @@ struct LocalImageView: View {
     }
 }
 
-// MARK: - Clothing Item Card (square, fills available width)
+// MARK: - Clothing Item Card (square cell; image never drives layout width)
 
 struct ClothingItemCard: View {
     let item: ClothingItem
     var isIdle: Bool = false
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            LocalImageView(path: item.flatLayImagePath ?? item.originalImagePath)
-                .aspectRatio(1, contentMode: .fill)
-                .frame(minWidth: 0, maxWidth: .infinity)
-                .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            if isIdle {
-                Text("未搭配")
-                    .font(.system(size: 8, weight: .medium))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
-                    .background(AppColors.idle)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .padding(4)
+        Color.clear
+            .aspectRatio(1, contentMode: .fit)
+            .overlay {
+                ZStack(alignment: .topTrailing) {
+                    LocalImageView(path: item.flatLayImagePath ?? item.originalImagePath)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    if isIdle {
+                        Text("未搭配")
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(AppColors.idle)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .padding(4)
+                    }
+                }
             }
-        }
-        .aspectRatio(1, contentMode: .fit)
-        .frame(minWidth: 0, maxWidth: .infinity)
-        .shadow(color: .black.opacity(0.06), radius: 2, x: 0, y: 1)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .contentShape(Rectangle())
     }
 }

@@ -76,11 +76,7 @@ struct WardrobeView: View {
                                 }
 
                                 if viewModel.searchText.isEmpty {
-                                    if selectedCategoryName == "全部" {
-                                        sectionLayout
-                                    } else {
-                                        categoryGrid
-                                    }
+                                    categoryGrid
                                 } else {
                                     searchContent
                                 }
@@ -300,117 +296,43 @@ struct WardrobeView: View {
         }
     }
 
-    // MARK: - Category Grid
+    // MARK: - Category Grid (always 3 columns)
+
+    private static let wardrobeColumns = [
+        GridItem(.flexible(minimum: 0), spacing: 6),
+        GridItem(.flexible(minimum: 0), spacing: 6),
+        GridItem(.flexible(minimum: 0), spacing: 6)
+    ]
 
     private var categoryGrid: some View {
         Group {
             if itemsForSelectedCategory.isEmpty {
                 emptyStateView
             } else {
-                let columns = [
-                    GridItem(.flexible(), spacing: 6),
-                    GridItem(.flexible(), spacing: 6),
-                    GridItem(.flexible(), spacing: 6)
-                ]
-                LazyVGrid(columns: columns, spacing: 6) {
-                    ForEach(itemsForSelectedCategory) { item in
-                        ClothingItemCard(
-                            item: item,
-                            isIdle: viewModel.idleItemIDs.contains(item.id ?? UUID())
-                        )
-                        .onTapGesture { selectedItem = item }
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                itemToDelete = item
-                            } label: {
-                                Label("删除单品", systemImage: "trash")
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 8)
-                .padding(.top, 8)
+                clothingGrid(itemsForSelectedCategory)
             }
         }
     }
 
-    // MARK: - Section Layout
-
-    private var sectionLayout: some View {
-        VStack(spacing: 12) {
-            ForEach(CategorySection.all, id: \.name) { section in
-                let sectionItems: [ClothingItem] = section.isOther
-                    ? viewModel.otherItems(excludingCategories: CategorySection.standardCategories)
-                    : viewModel.items(inCategories: section.categories)
-
-                if !sectionItems.isEmpty {
-                    wardrobeSectionCard(
-                        name: section.name,
-                        items: sectionItems
-                    )
+    private func clothingGrid(_ items: [ClothingItem]) -> some View {
+        LazyVGrid(columns: Self.wardrobeColumns, spacing: 6) {
+            ForEach(items) { item in
+                ClothingItemCard(
+                    item: item,
+                    isIdle: viewModel.idleItemIDs.contains(item.id ?? UUID())
+                )
+                .onTapGesture { selectedItem = item }
+                .contextMenu {
+                    Button(role: .destructive) {
+                        itemToDelete = item
+                    } label: {
+                        Label("删除单品", systemImage: "trash")
+                    }
                 }
             }
-
-            if viewModel.filteredItems.isEmpty {
-                emptyStateView
-            }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 6)
         .padding(.top, 8)
-    }
-
-    private func wardrobeSectionCard(name: String, items: [ClothingItem]) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Section header
-            HStack {
-                HStack(spacing: 5) {
-                    Text(name)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.primary)
-                    Text("\(items.count)")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                Button {
-                    showAllSectionItems = items
-                    showAllSectionTitle = name
-                } label: {
-                    Image(systemName: "list.bullet")
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
-
-            // Horizontal scroll
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 8) {
-                    ForEach(items) { item in
-                        ClothingItemCard(
-                            item: item,
-                            isIdle: viewModel.idleItemIDs.contains(item.id ?? UUID())
-                        )
-                        .frame(width: 88, height: 88)
-                        .onTapGesture { selectedItem = item }
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                itemToDelete = item
-                            } label: {
-                                Label("删除单品", systemImage: "trash")
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
-            }
-        }
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
     }
 
     // MARK: - Search Results
@@ -427,30 +349,7 @@ struct WardrobeView: View {
                 }
                 .padding(.vertical, 80)
             } else {
-                let columns = [
-                    GridItem(.flexible(), spacing: 12),
-                    GridItem(.flexible(), spacing: 12),
-                    GridItem(.flexible(), spacing: 12)
-                ]
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(viewModel.filteredItems) { item in
-                        ClothingItemCard(
-                            item: item,
-                            isIdle: viewModel.idleItemIDs.contains(item.id ?? UUID())
-                        )
-                        .frame(maxWidth: .infinity)
-                        .onTapGesture { selectedItem = item }
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                itemToDelete = item
-                            } label: {
-                                Label("删除单品", systemImage: "trash")
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+                clothingGrid(viewModel.filteredItems)
             }
         }
     }
@@ -602,9 +501,9 @@ struct CategoryGridSheet: View {
     @State private var itemToDelete: ClothingItem? = nil
 
     private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
+        GridItem(.flexible(minimum: 0), spacing: 6),
+        GridItem(.flexible(minimum: 0), spacing: 6),
+        GridItem(.flexible(minimum: 0), spacing: 6)
     ]
 
     var body: some View {
@@ -616,7 +515,6 @@ struct CategoryGridSheet: View {
                             item: item,
                             isIdle: idleItemIDs.contains(item.id ?? UUID())
                         )
-                        .frame(maxWidth: .infinity)
                         .onTapGesture {
                             onSelect(item)
                             dismiss()
