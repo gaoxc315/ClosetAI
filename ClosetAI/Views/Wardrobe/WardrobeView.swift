@@ -210,23 +210,21 @@ struct WardrobeView: View {
     // MARK: - Category Rail
 
     private var categoryRail: some View {
-        HStack(spacing: 0) {
-            VStack(spacing: 0) {
-                ForEach(categoryRailEntries, id: \.name) { entry in
-                    AppTabItem(
-                        icon: entry.icon,
-                        title: entry.name,
-                        selected: selectedCategoryName == entry.name
-                    ) {
-                        selectedCategoryName = entry.name
-                    }
+        VStack(spacing: 0) {
+            ForEach(categoryRailEntries, id: \.name) { entry in
+                AppTabItem(
+                    icon: entry.icon,
+                    title: entry.name,
+                    selected: selectedCategoryName == entry.name
+                ) {
+                    selectedCategoryName = entry.name
                 }
             }
-            .frame(width: 64)
-            .frame(maxHeight: .infinity)
-            Divider()
         }
-        .background(Color(.systemBackground))
+        .frame(width: 64)
+        .frame(maxHeight: .infinity)
+        .padding(.bottom, 100)
+        .background(Color(.systemGray6))
         .zIndex(2)
     }
 
