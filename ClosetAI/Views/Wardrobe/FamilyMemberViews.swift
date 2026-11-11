@@ -92,20 +92,18 @@ struct ManageFamilyMembersView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            memberToDelete = member
-                        } label: {
-                            Label("删除", systemImage: "trash")
-                        }
-                    }
+                }
+                .onMove(perform: viewModel.moveFamilyMembers)
+                .onDelete { offsets in
+                    memberToDelete = offsets.first.map { viewModel.familyMembers[$0] }
                 }
             } header: {
                 Text("家庭成员")
             } footer: {
-                Text("删除成员后，其衣物会回到「未分配」，不会被删除。")
+                Text("按住右侧 ≡ 拖动排序，顺序即衣橱、穿搭顶部的显示顺序。删除成员后，其衣物会回到「未分配」，不会被删除。")
             }
         }
+        .environment(\.editMode, .constant(.active))
         .font(.subheadline)
         .navigationTitle("家庭成员")
         .navigationBarTitleDisplayMode(.inline)

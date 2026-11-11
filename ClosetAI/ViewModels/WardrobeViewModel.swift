@@ -92,6 +92,13 @@ class WardrobeViewModel: ObservableObject {
         objectWillChange.send()
     }
 
+    func moveFamilyMembers(from source: IndexSet, to destination: Int) {
+        var reordered = familyMembers
+        reordered.move(fromOffsets: source, toOffset: destination)
+        persistence.reorderFamilyMembers(reordered)
+        familyMembers = reordered
+    }
+
     func deleteFamilyMember(_ member: FamilyMember) {
         if case .member(let id) = selectedFilter, id == member.id {
             selectFilter(.all)

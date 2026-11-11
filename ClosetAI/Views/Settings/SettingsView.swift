@@ -323,16 +323,14 @@ struct CategorySettingsView: View {
                 .onMove(perform: categoryStore.move)
                 .onDelete(perform: categoryStore.delete)
             } footer: {
-                Text("「全部」始终在衣橱左侧顶部。删除分类不会删除衣物。")
+                Text("按住右侧 ≡ 拖动排序，顺序即衣橱左侧的显示顺序。「全部」始终在最上方。删除分类不会删除衣物。")
             }
         }
+        .environment(\.editMode, .constant(.active))
         .font(.subheadline)
         .navigationTitle("衣橱分类")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                EditButton()
-            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     editor = CategoryEditorState()

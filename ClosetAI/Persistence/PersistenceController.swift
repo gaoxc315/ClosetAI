@@ -172,6 +172,13 @@ class PersistenceController {
         save()
     }
 
+    func reorderFamilyMembers(_ members: [FamilyMember]) {
+        for (index, member) in members.enumerated() {
+            member.sortOrder = Int32(index)
+        }
+        save()
+    }
+
     func deleteFamilyMember(_ member: FamilyMember) {
         let memberId = member.id
         let clothes = fetchClothingItems(includeDeleted: true).filter { $0.memberId == memberId }

@@ -2,11 +2,11 @@
 
 > 🤖 本项目 100% 由 AI 构建，欢迎各位开发者自由使用。如果在使用过程中遇到任何问题，建议直接去问问 AI —— 毕竟它比我更了解这段代码。
 
-> An AI-powered wardrobe management iOS app built with SwiftUI. Automatically tag your clothing with AI, create outfit collages, and try on outfits virtually — all on-device with your own API key.
+> A family wardrobe management iOS app built with SwiftUI. Organize clothes by family member and custom categories, build outfits by hand, and optionally turn on cloud AI (auto-tagging, AI collage, virtual try-on) with your own DashScope API key.
 
 [![Swift](https://img.shields.io/badge/Swift-5.9-orange)](https://swift.org)
 [![iOS](https://img.shields.io/badge/iOS-26.0+-blue)](https://developer.apple.com/ios/)
-[![Xcode](https://img.shields.io/badge/Xcode-26_beta-blue)](https://developer.apple.com/xcode/)
+[![Xcode](https://img.shields.io/badge/Xcode-26-blue)](https://developer.apple.com/xcode/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ---
@@ -19,23 +19,27 @@
 
 ## ✨ Features
 
+> **当前默认关闭云端 AI。** 所有功能在本地运行，不需要 API Key。如需恢复 AI，见下文「开启云端 AI」。
+
 ### 衣橱管理（Wardrobe）
-- 📸 **AI 自动打标** — 拍照 / 相册上传，通义千问 Qwen-VL 自动识别大类、颜色、风格、季节、场合
-- 🖼️ **背景消除 + 平铺图** — 自动去背景，生成标准化 flat-lay 展示图
-- 🗂️ **分类浏览** — 上装 / 外套 / 连衣裙 / 下装 / 鞋子 / 包包 / 配饰各自独立横栏
-- 🔍 **全文检索** — 跨颜色、风格、类别、备注的实时搜索
-- ✏️ **标签编辑** — Chip 单选大类，多选季节 / 场合，自由编辑小类 / 图案
+- 👨‍👩‍👧 **家庭成员分级** — 顶部成员栏（全部 / 各成员 / 未分配）筛选衣物；添加衣物时可指定归属，详情页可随时改
+- 🗂️ **左侧分类栏** — 分类上下等分铺满左侧，停在底部 Tab 栏之上，底色与页面一致；分类可在设置中自定义
+- 🧱 **三列网格** — 任意屏幕宽度都固定三列，图片按正方形裁切，不会撑出屏幕
+- 🖼️ **背景消除 + 平铺图** — 本地 Vision 去背景，生成标准化 flat-lay 展示图
+- 🔍 **双指缩放** — 详情页平铺图支持双指放大、拖动、双击切换，可全屏查看
+- 🔎 **搜索** — 跨类别、颜色、风格、备注、成员名的实时搜索
+- ✏️ **标签编辑** — 单选大类（来自自定义分类），多选季节 / 场合，自由编辑小类 / 图案 / 备注
 
-### 穿搭创建（Outfit）
-- 🎨 **AI 穿搭推荐** — 根据场合、季节、数量偏好，AI 从衣橱中智能组搭并生成推荐语
-- 🖼️ **AI 平铺图生成** — 通义 Wan2.6 生成高质量 flat-lay 穿搭大图
-- 👗 **虚拟试穿** — 选择模特图 + 穿搭，AI 合成上身效果，支持左右滑动对比
-- ✋ **手动组搭** — 手动选取最多 4 件单品，即时组建穿搭方案
+### 穿搭（Outfit）
+- 👥 **按成员区分** — 穿搭页顶部成员栏筛选（全部 / 各成员）；旧穿搭会按所含衣物自动推断归属
+- ✋ **手动组搭** — 按成员、分类筛选，手动选取最多 4 件单品，本地生成拼图
+- 🎨 **AI 平铺图 / 虚拟试穿** — 需开启云端 AI
 
-### 数据洞察（Settings）
-- 📊 **颜色分布** — 可视化衣橱色系占比，区分灰 / 米 / 卡其等细分色名
-- 🕐 **久未穿着** — 统计 90 天内未出现在穿搭中的单品
-- 🔑 **API Key 管理** — 本地 Keychain 安全存储，不上传任何服务器
+### 设置（Settings）
+- 🏷️ **衣橱分类** — 增删、改名、换图标；按住 ≡ 自由拖动排序，顺序即衣橱左侧显示顺序（「全部」固定在最上）。改名会同步已有衣物，删除分类不会删除衣物
+- 👨‍👩‍👧 **家庭成员** — 增删、改名；按住 ≡ 自由拖动排序，顺序即衣橱 / 穿搭顶部成员栏的顺序。删除成员后其衣物回到「未分配」
+- 📊 **统计** — 衣物总数、颜色分布、近 90 天未穿
+- 🗑️ **数据管理** — 清空已删除的衣物
 
 ---
 
@@ -43,26 +47,35 @@
 
 ```
 ClosetAI/
-├── App/                  # Entry point, ContentView, TabView
+├── App/                  # ClosetAIApp, ContentView（TabView：衣橱 / 穿搭 / 设置）
 ├── Models/               # ClothingTags, ClothingItemModel, OutfitModel
-├── Persistence/          # CoreData stack, PersistenceController, entity extensions
+├── Persistence/          # CoreData model（ClothingItem / FamilyMember / Outfit / WearLog）, PersistenceController
 ├── Services/
-│   ├── AliyunService.swift      # DashScope API (auto-tag, collage, try-on)
-│   └── ImageProcessingService.swift  # Background removal, flat-lay generation
+│   ├── AliyunService.swift          # DashScope API（打标 / 拼图 / 试穿，AI 关闭时不调用）
+│   └── ImageProcessingService.swift # 去背景、平铺图、本地拼图
 ├── ViewModels/
-│   ├── WardrobeViewModel.swift  # Wardrobe CRUD, search, statistics
-│   └── OutfitViewModel.swift    # Outfit creation, AI calls, save logic
+│   ├── WardrobeViewModel.swift  # 衣物 CRUD、成员筛选与排序、搜索、统计
+│   └── OutfitViewModel.swift    # 穿搭保存、成员归属推断、拼图
 ├── Views/
-│   ├── Components/       # ViewExtensions (Toast), TagView, AsyncImageView
-│   ├── Wardrobe/         # WardrobeView, ClothingDetailView, CameraView
-│   ├── Outfit/           # OutfitView, TryOnView, ManualOutfitView
-│   └── Settings/         # SettingsView (stats, API key, not-worn items)
-├── Utilities/            # AppColors
-└── Resources/            # Assets, model_person.png (default try-on model)
+│   ├── Components/       # ViewExtensions（Toast、Tab 样式项、系统 Tab 栏封装）, AsyncImageView（本地图、缩放）, TagView
+│   ├── Wardrobe/         # WardrobeView, ClothingDetailView, FamilyMemberViews, CameraView
+│   ├── Outfit/           # OutfitView, ManualOutfitView, TryOnView
+│   └── Settings/         # SettingsView（统计、分类管理、成员入口）
+├── Utilities/
+│   ├── AppFeatures.swift    # 功能开关（aiEnabled）
+│   ├── CategoryStore.swift  # 自定义衣橱分类（UserDefaults 持久化）
+│   └── AppColors.swift
+└── Resources/            # Assets（含 AppIcon）, model_person.png（试穿默认模特图占位）
 ```
 
-**Pattern:** SwiftUI + MVVM + CoreData
-**Dependency:** [Kingfisher](https://github.com/onevcat/Kingfisher) (remote image loading)
+**Pattern:** SwiftUI + MVVM + CoreData（轻量迁移）
+
+**数据存储：**
+- 衣物、成员（含排序）、穿搭 → CoreData
+- 自定义分类及顺序、当前成员筛选 → UserDefaults
+- 图片 → App Documents 目录（只存文件名）
+
+**Dependency:** [Kingfisher](https://github.com/onevcat/Kingfisher)（已声明，目前代码未使用）
 
 ---
 
@@ -70,64 +83,66 @@ ClosetAI/
 
 | Item | Requirement |
 |------|-------------|
-| iOS | 26.0+ (Xcode 26 beta) |
-| Device | iPhone with camera |
-| API | [阿里云 DashScope](https://dashscope.aliyun.com/) API Key（免费额度可用） |
-| Tool | [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`) |
-
-> **Note:** This project targets iOS 26 and requires Xcode 26 beta. It uses `Wan2.6-image` and `Qwen-VL-Plus` models from Alibaba Cloud DashScope.
+| iOS | 26.0+ |
+| Xcode | 26 |
+| Device | iPhone（拍照需相机） |
+| Tool（可选） | [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`) |
+| API（可选） | [阿里云 DashScope](https://dashscope.aliyun.com/) 按量计费 API Key，仅开启 AI 时需要 |
 
 ---
 
 ## 🚀 Getting Started
 
-### 1. Clone & Generate Project
+### 1. Clone
 
 ```bash
 git clone https://github.com/<your-username>/ClosetAI.git
 cd ClosetAI
-
-# Install XcodeGen if needed
-brew install xcodegen
-
-# Generate the Xcode project
-xcodegen generate
 ```
+
+仓库已包含 `ClosetAI.xcodeproj`，可直接打开。
 
 ### 2. Configure Signing
 
-Edit `project.yml` and fill in your Apple Developer Team ID:
+在 Xcode 的 **Signing & Capabilities** 中选择你的 Team，并把 Bundle Identifier 改成你自己的（如 `com.yourname.closetai`）。
+
+如果使用 XcodeGen，同步修改 `project.yml`：
 
 ```yaml
 settings:
   base:
-    PRODUCT_BUNDLE_IDENTIFIER: com.yourname.closetai  # Change as needed
-    DEVELOPMENT_TEAM: "XXXXXXXXXX"                    # Your Apple Team ID
+    PRODUCT_BUNDLE_IDENTIFIER: com.yourname.closetai
+    DEVELOPMENT_TEAM: "XXXXXXXXXX"
 ```
 
-Then regenerate:
-```bash
-xcodegen generate
-```
+> ⚠️ `xcodegen generate` 会按 `project.yml` 重新生成工程，覆盖在 Xcode 里手动改过的设置。
 
-### 3. Open in Xcode
+### 3. Run on Device
 
 ```bash
 open ClosetAI.xcodeproj
 ```
 
-Select your device and hit **Run** (⌘R).
+选择你的 iPhone，按 **Run**（⌘R）。首次安装需在手机 **设置 → 通用 → VPN 与设备管理** 中信任开发者证书。免费 Apple ID 签名的 App 7 天后需重新安装。
 
-### 4. Add Your DashScope API Key
+命令行编译（Xcode 不在默认路径时需指定 `DEVELOPER_DIR`）：
 
-On first launch, go to **设置 (Settings)** tab → enter your DashScope API Key.
-The key is stored securely in iOS Keychain and never leaves your device.
-
-Get a free API key at: [https://dashscope.aliyun.com/](https://dashscope.aliyun.com/)
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+xcodebuild -project ClosetAI.xcodeproj -scheme ClosetAI -destination 'generic/platform=iOS' build
+```
 
 ---
 
-## 🤖 AI Models Used
+## 🤖 开启云端 AI（可选）
+
+AI 功能由 `ClosetAI/Utilities/AppFeatures.swift` 控制：
+
+```swift
+enum AppFeatures {
+    static let aiEnabled = false   // 改为 true 恢复 AI
+}
+```
 
 | Function | Model | API |
 |----------|-------|-----|
@@ -135,37 +150,37 @@ Get a free API key at: [https://dashscope.aliyun.com/](https://dashscope.aliyun.
 | AI 穿搭平铺图 | `wan2.6-image` | DashScope multimodal generation |
 | 虚拟试穿 | `wan2.6-image` | DashScope multimodal generation |
 
-All AI calls are made directly from the app to DashScope using your personal API key. No intermediate server involved.
+注意：
+- 当前版本已移除设置页里的 API Key 与默认模特图配置入口。开启 AI 后需要自行恢复这部分 UI，或在代码中提供 Key。
+- 必须使用 DashScope **按量计费** 的 API Key。**通义 Coding Plan 的 `sk-sp-` Key 不能用于这些接口**，调用会返回 401。
 
 ---
 
 ## 🔒 Privacy & Security
 
-- **No data collected** — all clothing photos and outfit data are stored locally in CoreData / app Documents directory
-- **API key in Keychain** — stored using iOS Security framework, never hardcoded or logged
-- **No analytics or tracking** of any kind
-- Photos are sent to DashScope API only when you trigger AI features (tagging / outfit generation / try-on)
+- **AI 关闭时完全离线** — 照片、衣物、穿搭只存储在本机 CoreData 与 Documents 目录
+- **无统计、无追踪**
+- **开启 AI 后** — 衣物照片和模特（人像）照片会上传到阿里云 DashScope；API Key 存于 iOS Keychain，但仍在客户端，存在被提取的风险，不建议把带额度的 Key 打包分发给他人
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] 穿着日历 — visual calendar of past outfits
-- [ ] iCloud / OSS 云同步 — cross-device wardrobe sync
-- [ ] 季节智能推荐 — weather-aware outfit suggestions
-- [ ] Widget — daily outfit reminder on home screen
-- [ ] CoreData → CloudKit migration
+- [ ] 缩略图缓存，优化大衣橱滚动性能
+- [ ] 穿搭与衣物改用 CoreData 关系，彻底删除衣物时同步清理穿搭
+- [ ] 删除分类时可选择将衣物迁移到其他分类
+- [ ] 穿着日历
+- [ ] iCloud / CloudKit 同步
+- [ ] Widget — 每日穿搭提醒
 
 ---
 
 ## 🤝 Contributing
 
-Pull requests are welcome! For major changes, please open an issue first to discuss what you'd like to change.
+欢迎提交 Pull Request。较大的改动请先开 Issue 讨论。
 
-**Setup for contributors:**
-1. Follow the "Getting Started" steps above
-2. Use `swiftc -parse <file.swift>` for quick syntax checks without a full build
-3. The project uses XcodeGen — edit `project.yml` for project structure changes, then run `xcodegen generate`
+1. 按上面的 Getting Started 跑通项目
+2. 新增 Swift 文件后，确认已加入 `ClosetAI.xcodeproj` 的编译目标（或改 `project.yml` 后执行 `xcodegen generate`）
 
 ---
 
