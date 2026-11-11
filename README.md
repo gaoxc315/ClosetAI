@@ -13,11 +13,11 @@
 
 ## 📽️ Demo
 - 衣橱页面
-<img src="./docs/1.png" width="320">
+<img src="https://picui.ogmua.cn/s1/2026/11/11/6af488bd2eddf.webp" width="320">
 - 穿搭页面
-<img src="./docs/2.png" width="320">
+<img src="https://picui.ogmua.cn/s1/2026/11/11/6af488b89d6bc.webp" width="320">
 - 设置页面
-<img src="./docs/3.png" width="320">
+<img src="https://picui.ogmua.cn/s1/2026/11/11/6af488d599e2f.webp" width="320">
 
 ---
 
