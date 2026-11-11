@@ -12,8 +12,12 @@
 ---
 
 ## 📽️ Demo
-
-<video src="https://github.com/user-attachments/assets/73f9095e-bbaf-4dd1-8f54-b1baae1ff98c" controls width="320"></video>
+- 衣橱页面
+<img src="./docs/1.png" width="320">
+- 穿搭页面
+<img src="./docs/2.png" width="320">
+- 设置页面
+<img src="./docs/3.png" width="320">
 
 ---
 
