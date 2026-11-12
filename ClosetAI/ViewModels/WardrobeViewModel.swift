@@ -43,6 +43,10 @@ class WardrobeViewModel: ObservableObject {
             self, selector: #selector(categoriesDidChange),
             name: .closetAICategoriesDidChange, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(cloudDidChange),
+            name: .closetAICloudDidChange, object: nil
+        )
     }
 
     func loadItems() {
@@ -57,6 +61,10 @@ class WardrobeViewModel: ObservableObject {
     }
 
     @objc private func categoriesDidChange() {
+        loadItems()
+    }
+
+    @objc private func cloudDidChange() {
         loadItems()
     }
 
@@ -168,8 +176,8 @@ class WardrobeViewModel: ObservableObject {
                 ($0.subCategory?.lowercased().contains(query) == true) ||
                 ($0.notes?.lowercased().contains(query) == true) ||
                 (memberName(for: $0).lowercased().contains(query)) ||
-                (($0.colors as? [String])?.joined().lowercased().contains(query) == true) ||
-                (($0.styles as? [String])?.joined().lowercased().contains(query) == true)
+                ($0.colorsList.joined().lowercased().contains(query)) ||
+                ($0.stylesList.joined().lowercased().contains(query))
             }
         }
         filteredItems = result
@@ -235,7 +243,7 @@ class WardrobeViewModel: ObservableObject {
     var colorDistribution: [String: Int] {
         var dist: [String: Int] = [:]
         for item in items where !item.isSoftDeleted {
-            for color in (item.colors as? [String]) ?? [] {
+            for color in item.colorsList {
                 dist[color, default: 0] += 1
             }
         }
@@ -258,8 +266,8 @@ class WardrobeViewModel: ObservableObject {
             let itemID = UUID()
             let originalFilename = "\(itemID.uuidString)_original.jpg"
             let flatLayFilename = "\(itemID.uuidString)_flatlay.jpg"
-            guard let originalPath = imageService.saveImageToDocuments(image, filename: originalFilename),
-                  let flatLayPath = imageService.saveImageToDocuments(flatLay, filename: flatLayFilename) else {
+            guard let originalSaved = imageService.saveImageToDocumentsWithData(image, filename: originalFilename),
+                  let flatLaySaved = imageService.saveImageToDocumentsWithData(flatLay, filename: flatLayFilename) else {
                 throw NSError(domain: "ClosetAI", code: -1, userInfo: [NSLocalizedDescriptionKey: "保存图片失败"])
             }
             var tags = ClothingTags()
@@ -269,8 +277,8 @@ class WardrobeViewModel: ObservableObject {
             }
             let model = ClothingItemModel(
                 id: itemID,
-                originalImagePath: originalPath,
-                flatLayImagePath: flatLayPath,
+                originalImagePath: originalSaved.filename,
+                flatLayImagePath: flatLaySaved.filename,
                 category: tags.category.isEmpty ? "其他" : tags.category,
                 subCategory: tags.subCategory,
                 colors: tags.colors,
@@ -281,7 +289,11 @@ class WardrobeViewModel: ObservableObject {
                 memberId: memberId,
                 notes: tags.notes
             )
-            persistence.createClothingItem(from: model)
+            persistence.createClothingItem(
+                from: model,
+                originalData: originalSaved.data,
+                flatLayData: flatLaySaved.data
+            )
             await MainActor.run { self.loadItems(); self.isLoading = false }
         } catch {
             await MainActor.run { self.errorMessage = error.localizedDescription; self.isLoading = false }
@@ -312,11 +324,11 @@ class WardrobeViewModel: ObservableObject {
     func updateItem(_ item: ClothingItem, tags: ClothingTags) {
         item.category = tags.category
         item.subCategory = tags.subCategory
-        item.colors = tags.colors as NSObject
+        item.colorsList = tags.colors
         item.pattern = tags.pattern
-        item.styles = tags.styles as NSObject
-        item.seasons = tags.seasons as NSObject
-        item.occasions = tags.occasions as NSObject
+        item.stylesList = tags.styles
+        item.seasonsList = tags.seasons
+        item.occasionsList = tags.occasions
         item.notes = tags.notes
         persistence.save()
         loadItems()

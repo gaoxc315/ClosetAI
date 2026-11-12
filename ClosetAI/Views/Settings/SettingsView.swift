@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct SettingsView: View {
     @StateObject private var settingsVM = SettingsViewModel()
@@ -9,6 +10,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 statisticsSection
+                iCloudSection
                 categorySection
                 dataSection
                 infoSection
@@ -43,6 +45,21 @@ struct SettingsView: View {
             }
         } header: {
             Text("统计面板")
+        }
+    }
+
+    @ViewBuilder private var iCloudSection: some View {
+        Section {
+            LabeledContent {
+                Text(settingsVM.syncStatusText)
+                    .foregroundColor(settingsVM.syncStatusColor)
+            } label: {
+                Label("同步状态", systemImage: "icloud")
+            }
+        } header: {
+            Text("iCloud 同步")
+        } footer: {
+            Text("衣物、穿搭、分类与图片会同步到你的 iCloud。换新手机后安装 App 并登录同一 Apple ID，即可自动恢复，无需重新导入图片。")
         }
     }
 
@@ -120,6 +137,37 @@ struct SettingsView: View {
 
 class SettingsViewModel: ObservableObject {
     @Published var showClearConfirm = false
+    @Published private(set) var syncStatusText = "检查中…"
+    @Published private(set) var syncStatusColor: Color = .secondary
+
+    private var cancellables = Set<AnyCancellable>()
+
+    init() {
+        PersistenceController.shared.$syncStatus
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] status in
+                self?.apply(status)
+            }
+            .store(in: &cancellables)
+        apply(PersistenceController.shared.syncStatus)
+    }
+
+    private func apply(_ status: CloudSyncStatus) {
+        switch status {
+        case .available:
+            syncStatusText = "已开启"
+            syncStatusColor = .green
+        case .syncing:
+            syncStatusText = "同步中…"
+            syncStatusColor = .orange
+        case .localOnly:
+            syncStatusText = "仅本机"
+            syncStatusColor = .secondary
+        case .unavailable(let reason):
+            syncStatusText = reason
+            syncStatusColor = .orange
+        }
+    }
 
     func clearDeletedItems() {
         let items = PersistenceController.shared.fetchClothingItems(includeDeleted: true).filter { $0.isSoftDeleted }

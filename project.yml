@@ -1,6 +1,6 @@
 name: ClosetAI
 options:
-  bundleIdPrefix: com.example
+  bundleIdPrefix: com.gaoxiancheng
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
@@ -37,15 +37,18 @@ targets:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+    entitlements:
+      path: ClosetAI/ClosetAI.entitlements
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.closetai
+        PRODUCT_BUNDLE_IDENTIFIER: com.gaoxiancheng.closetai
         SWIFT_VERSION: "5.9"
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"
-        DEVELOPMENT_TEAM: ""   # Set your own Apple Developer Team ID here
+        DEVELOPMENT_TEAM: "X576C5NHXU"
         CODE_SIGN_STYLE: Automatic
         CODE_SIGNING_REQUIRED: "YES"
         CODE_SIGNING_ALLOWED: "YES"
+        CODE_SIGN_ENTITLEMENTS: ClosetAI/ClosetAI.entitlements
         ENABLE_PREVIEWS: "NO"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       configs:

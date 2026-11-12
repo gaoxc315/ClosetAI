@@ -223,14 +223,19 @@ class ImageProcessingService {
 
     // MARK: - Save Image to Documents
 
+    /// 写入 Documents，返回文件名；同时带回 JPEG Data 供 CloudKit Binary 字段双写。
+    @discardableResult
     func saveImageToDocuments(_ image: UIImage, filename: String) -> String? {
+        saveImageToDocumentsWithData(image, filename: filename)?.filename
+    }
+
+    func saveImageToDocumentsWithData(_ image: UIImage, filename: String) -> (filename: String, data: Data)? {
         guard let data = image.jpegData(compressionQuality: 0.85) else { return nil }
         let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let fileURL = docsURL.appendingPathComponent(filename)
         do {
             try data.write(to: fileURL)
-            // 只存文件名，避免沙箱路径变化后失效
-            return filename
+            return (filename, data)
         } catch {
             print("Save image error: \(error)")
             return nil

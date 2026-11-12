@@ -22,11 +22,11 @@ struct ClothingDetailView: View {
         var tags = ClothingTags()
         tags.category = item.category ?? ""
         tags.subCategory = item.subCategory ?? ""
-        tags.colors = (item.colors as? [String]) ?? []
+        tags.colors = item.colorsList
         tags.pattern = item.pattern ?? ""
-        tags.styles = (item.styles as? [String]) ?? []
-        tags.seasons = (item.seasons as? [String]) ?? []
-        tags.occasions = (item.occasions as? [String]) ?? []
+        tags.styles = item.stylesList
+        tags.seasons = item.seasonsList
+        tags.occasions = item.occasionsList
         tags.notes = item.notes ?? ""
         _editedTags = State(initialValue: tags)
         _editedMemberId = State(initialValue: item.memberId)

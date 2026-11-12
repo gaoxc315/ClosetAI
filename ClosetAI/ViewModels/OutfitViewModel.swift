@@ -16,6 +16,13 @@ class OutfitViewModel: ObservableObject {
 
     init() {
         loadSavedOutfits()
+        NotificationCenter.default.addObserver(
+            forName: .closetAICloudDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.loadSavedOutfits()
+        }
     }
 
     func loadSavedOutfits() {
@@ -146,6 +153,8 @@ class OutfitViewModel: ObservableObject {
     func saveOutfit(_ suggestion: OutfitSuggestion, collagePath: String, name: String, occasion: String, tryOnResult: UIImage? = nil, memberId: UUID? = nil) {
         let itemIDs = suggestion.items.compactMap { $0.id }
         let resolvedMemberId = memberId ?? Self.memberId(from: suggestion.items, preferred: .all)
+        let collageData = imageService.loadImage(from: collagePath)?.jpegData(compressionQuality: 0.85)
+            ?? (try? Data(contentsOf: URL(fileURLWithPath: LocalImageView.resolvePath(collagePath))))
         let model = OutfitModel(
             name: name,
             itemIDs: itemIDs,
@@ -153,14 +162,18 @@ class OutfitViewModel: ObservableObject {
             collagePath: collagePath,
             memberId: resolvedMemberId
         )
-        let newOutfit = persistence.createOutfit(from: model)
-
-        // 若同时生成了上身图，一并写入
+        var tryOnData: Data?
+        var tryOnPath: String?
         if let tryOnImage = tryOnResult {
-            let filename = "\(newOutfit.id?.uuidString ?? UUID().uuidString)_tryon.jpg"
-            if let path = imageService.saveImageToDocuments(tryOnImage, filename: filename) {
-                newOutfit.tryOnResultPath = path
+            let filename = "\(model.id.uuidString)_tryon.jpg"
+            if let saved = imageService.saveImageToDocumentsWithData(tryOnImage, filename: filename) {
+                tryOnPath = saved.filename
+                tryOnData = saved.data
             }
+        }
+        let newOutfit = persistence.createOutfit(from: model, collageData: collageData, tryOnData: tryOnData)
+        if let tryOnPath {
+            newOutfit.tryOnResultPath = tryOnPath
         }
 
         for item in suggestion.items {
@@ -204,8 +217,9 @@ class OutfitViewModel: ObservableObject {
         if let oldPath = outfit.tryOnResultPath, !oldPath.isEmpty {
             try? FileManager.default.removeItem(atPath: LocalImageView.resolvePath(oldPath))
         }
-        if let path = imageService.saveImageToDocuments(image, filename: filename) {
-            outfit.tryOnResultPath = path
+        if let saved = imageService.saveImageToDocumentsWithData(image, filename: filename) {
+            outfit.tryOnResultPath = saved.filename
+            outfit.tryOnResultData = saved.data
             persistence.save()
             loadSavedOutfits()
         }

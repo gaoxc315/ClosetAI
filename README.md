@@ -40,6 +40,7 @@
 - 🎨 **AI 平铺图 / 虚拟试穿** — 需开启云端 AI
 
 ### 设置（Settings）
+- ☁️ **iCloud 同步** — 衣物、穿搭、分类与图片经 CloudKit 私有库同步；换机登录同一 Apple ID 即可恢复
 - 🏷️ **衣橱分类** — 增删、改名、换图标；按住 ≡ 自由拖动排序，顺序即衣橱左侧显示顺序（「全部」固定在最上）。改名会同步已有衣物，删除分类不会删除衣物
 - 👨‍👩‍👧 **家庭成员** — 增删、改名；按住 ≡ 自由拖动排序，顺序即衣橱 / 穿搭顶部成员栏的顺序。删除成员后其衣物回到「未分配」
 - 📊 **统计** — 衣物总数、颜色分布、近 90 天未穿
@@ -53,10 +54,10 @@
 ClosetAI/
 ├── App/                  # ClosetAIApp, ContentView（TabView：衣橱 / 穿搭 / 设置）
 ├── Models/               # ClothingTags, ClothingItemModel, OutfitModel
-├── Persistence/          # CoreData model（ClothingItem / FamilyMember / Outfit / WearLog）, PersistenceController
+├── Persistence/          # CoreData + CloudKit（ClothingItem / FamilyMember / Outfit / WearLog / CategoryConfig）
 ├── Services/
 │   ├── AliyunService.swift          # DashScope API（打标 / 拼图 / 试穿，AI 关闭时不调用）
-│   └── ImageProcessingService.swift # 去背景、平铺图、本地拼图
+│   └── ImageProcessingService.swift # 去背景、平铺图、本地拼图、Documents 双写
 ├── ViewModels/
 │   ├── WardrobeViewModel.swift  # 衣物 CRUD、成员筛选与排序、搜索、统计
 │   └── OutfitViewModel.swift    # 穿搭保存、成员归属推断、拼图
@@ -64,20 +65,22 @@ ClosetAI/
 │   ├── Components/       # ViewExtensions（Toast、Tab 样式项、系统 Tab 栏封装）, AsyncImageView（本地图、缩放）, TagView
 │   ├── Wardrobe/         # WardrobeView, ClothingDetailView, FamilyMemberViews, CameraView
 │   ├── Outfit/           # OutfitView, ManualOutfitView, TryOnView
-│   └── Settings/         # SettingsView（统计、分类管理、成员入口）
+│   └── Settings/         # SettingsView（统计、iCloud 同步状态、分类管理、成员入口）
 ├── Utilities/
 │   ├── AppFeatures.swift    # 功能开关（aiEnabled）
-│   ├── CategoryStore.swift  # 自定义衣橱分类（UserDefaults 持久化）
+│   ├── CategoryStore.swift  # 自定义衣橱分类（Core Data CategoryConfig + CloudKit）
 │   └── AppColors.swift
+├── ClosetAI.entitlements # iCloud CloudKit 容器
 └── Resources/            # Assets（含 AppIcon）, model_person.png（试穿默认模特图占位）
 ```
 
-**Pattern:** SwiftUI + MVVM + CoreData（轻量迁移）
+**Pattern:** SwiftUI + MVVM + Core Data（`NSPersistentCloudKitContainer`）
 
 **数据存储：**
-- 衣物、成员（含排序）、穿搭 → CoreData
-- 自定义分类及顺序、当前成员筛选 → UserDefaults
-- 图片 → App Documents 目录（只存文件名）
+- 衣物、成员、穿搭、穿着记录、自定义分类 → Core Data，经 CloudKit 私有库同步
+- 图片 → Documents 本地缓存 + Core Data Binary（`allowsExternalBinaryDataStorage`，随 CloudKit 同步）
+- 当前成员筛选 → UserDefaults（仅本机 UI 状态）
+- iCloud 容器：`iCloud.com.gaoxiancheng.closetai`
 
 **Dependency:** [Kingfisher](https://github.com/onevcat/Kingfisher)（已声明，目前代码未使用）
 
@@ -90,6 +93,7 @@ ClosetAI/
 | iOS | 26.0+ |
 | Xcode | 26 |
 | Device | iPhone（拍照需相机） |
+| Apple ID | 真机需登录 iCloud；CloudKit 需付费开发者账号启用容器 |
 | Tool（可选） | [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`) |
 | API（可选） | [阿里云 DashScope](https://dashscope.aliyun.com/) 按量计费 API Key，仅开启 AI 时需要 |
 
@@ -106,18 +110,19 @@ cd ClosetAI
 
 仓库已包含 `ClosetAI.xcodeproj`，可直接打开。
 
-### 2. Configure Signing
+### 2. Configure Signing & iCloud
 
-在 Xcode 的 **Signing & Capabilities** 中选择你的 Team，并把 Bundle Identifier 改成你自己的（如 `com.yourname.closetai`）。
+在 Xcode 的 **Signing & Capabilities** 中选择你的 Team。工程已包含 CloudKit entitlement（容器 `iCloud.com.gaoxiancheng.closetai`）。
 
-如果使用 XcodeGen，同步修改 `project.yml`：
+若改 Bundle Identifier，请同步修改：
 
-```yaml
-settings:
-  base:
-    PRODUCT_BUNDLE_IDENTIFIER: com.yourname.closetai
-    DEVELOPMENT_TEAM: "XXXXXXXXXX"
-```
+1. `ClosetAI.entitlements` 中的 iCloud 容器 ID  
+2. `PersistenceController.cloudKitContainerID`  
+3. `project.yml` / Xcode 的 `PRODUCT_BUNDLE_IDENTIFIER`  
+
+首次在真机运行时，Xcode 会在 CloudKit **Development** 环境自动创建 schema。上架前请在 [CloudKit Console](https://icloud.developer.apple.com/) 将 schema 部署到 **Production**。
+
+如果使用 XcodeGen，同步修改 `project.yml` 后执行 `xcodegen generate`。
 
 > ⚠️ `xcodegen generate` 会按 `project.yml` 重新生成工程，覆盖在 Xcode 里手动改过的设置。
 
@@ -160,9 +165,19 @@ enum AppFeatures {
 
 ---
 
+## ☁️ 换机 / 多设备
+
+1. 旧机登录 iCloud，打开 ClosetAI，在 **设置 → iCloud 同步** 确认状态为「已开启」，等待衣橱同步完成  
+2. 新机登录 **同一 Apple ID**，安装并打开 ClosetAI  
+3. 等待 CloudKit 拉取；衣物、穿搭、分类与图片会自动出现，无需重新导入  
+
+未登录 iCloud 时 App 仍可离线使用，数据仅保存在本机。
+
+---
+
 ## 🔒 Privacy & Security
 
-- **AI 关闭时完全离线** — 照片、衣物、穿搭只存储在本机 CoreData 与 Documents 目录
+- **默认本地 + 私有 iCloud** — 衣物与图片同步到你的 Apple ID 私有 CloudKit 数据库，不经过第三方服务器  
 - **无统计、无追踪**
 - **开启 AI 后** — 衣物照片和模特（人像）照片会上传到阿里云 DashScope；API Key 存于 iOS Keychain，但仍在客户端，存在被提取的风险，不建议把带额度的 Key 打包分发给他人
 
@@ -174,7 +189,7 @@ enum AppFeatures {
 - [ ] 穿搭与衣物改用 CoreData 关系，彻底删除衣物时同步清理穿搭
 - [ ] 删除分类时可选择将衣物迁移到其他分类
 - [ ] 穿着日历
-- [ ] iCloud / CloudKit 同步
+- [x] iCloud / CloudKit 同步
 - [ ] Widget — 每日穿搭提醒
 
 ---

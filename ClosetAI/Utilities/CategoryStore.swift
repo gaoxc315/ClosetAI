@@ -38,20 +38,43 @@ final class CategoryStore: ObservableObject {
     private static let defaultsKey = "closetai.wardrobeCategories"
 
     @Published var categories: [WardrobeCategory] {
-        didSet { persist() }
+        didSet {
+            guard !isApplyingRemote, isBootstrapped else { return }
+            persist()
+        }
     }
 
     var names: [String] {
         categories.map(\.name)
     }
 
+    private var isApplyingRemote = false
+    private var isBootstrapped = false
+    private var cloudObserver: NSObjectProtocol?
+
     init() {
-        if let data = UserDefaults.standard.data(forKey: Self.defaultsKey),
-           let decoded = try? JSONDecoder().decode([WardrobeCategory].self, from: data),
-           !decoded.isEmpty {
-            categories = decoded
+        if let legacy = Self.loadFromUserDefaults() {
+            categories = legacy
         } else {
             categories = Self.defaultCategories
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.bootstrapFromPersistence()
+        }
+
+        cloudObserver = NotificationCenter.default.addObserver(
+            forName: .closetAICloudDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.reloadFromCloud()
+        }
+    }
+
+    deinit {
+        if let cloudObserver {
+            NotificationCenter.default.removeObserver(cloudObserver)
         }
     }
 
@@ -92,6 +115,19 @@ final class CategoryStore: ObservableObject {
         return categories.first(where: { $0.name == name })?.icon ?? AppTabIcon.category(name)
     }
 
+    private func bootstrapFromPersistence() {
+        if let cloud = Self.loadFromCloud() {
+            isApplyingRemote = true
+            categories = cloud
+            isApplyingRemote = false
+            UserDefaults.standard.removeObject(forKey: Self.defaultsKey)
+        } else {
+            persist()
+            UserDefaults.standard.removeObject(forKey: Self.defaultsKey)
+        }
+        isBootstrapped = true
+    }
+
     private func validate(name: String, ignoring id: UUID?) -> String? {
         if name.isEmpty { return "请输入分类名称" }
         if name == Self.allCategoryName { return "「全部」为系统项，请换一个名称" }
@@ -115,9 +151,37 @@ final class CategoryStore: ObservableObject {
     }
 
     private func persist() {
-        if let data = try? JSONEncoder().encode(categories) {
-            UserDefaults.standard.set(data, forKey: Self.defaultsKey)
+        guard let data = try? JSONEncoder().encode(categories),
+              let json = String(data: data, encoding: .utf8) else { return }
+        PersistenceController.shared.upsertCategoryConfig(payloadJSON: json)
+    }
+
+    private func reloadFromCloud() {
+        guard isBootstrapped else { return }
+        guard let cloud = Self.loadFromCloud(), cloud != categories else { return }
+        isApplyingRemote = true
+        categories = cloud
+        isApplyingRemote = false
+        NotificationCenter.default.post(name: .closetAICategoriesDidChange, object: nil)
+    }
+
+    private static func loadFromCloud() -> [WardrobeCategory]? {
+        guard let json = PersistenceController.shared.fetchCategoryConfig()?.payloadJSON,
+              let data = json.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([WardrobeCategory].self, from: data),
+              !decoded.isEmpty else {
+            return nil
         }
+        return decoded
+    }
+
+    private static func loadFromUserDefaults() -> [WardrobeCategory]? {
+        guard let data = UserDefaults.standard.data(forKey: defaultsKey),
+              let decoded = try? JSONDecoder().decode([WardrobeCategory].self, from: data),
+              !decoded.isEmpty else {
+            return nil
+        }
+        return decoded
     }
 }
 

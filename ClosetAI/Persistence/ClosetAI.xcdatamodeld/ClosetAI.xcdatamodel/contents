@@ -1,9 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22222" systemVersion="23F79" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="NO" userDefinedModelVersionIdentifier="">
+    <entity name="CategoryConfig" representedClassName="CategoryConfig" syncable="YES" codeGenerationType="none">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="payloadJSON" optional="YES" attributeType="String"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
     <entity name="ClothingItem" representedClassName="ClothingItem" syncable="YES" codeGenerationType="none">
         <attribute name="category" optional="YES" attributeType="String"/>
-        <attribute name="colors" optional="YES" attributeType="Transformable" valueTransformerName="StringArrayTransformer" customClassName="NSArray"/>
+        <attribute name="colors" optional="YES" attributeType="String"/>
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="flatLayImageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="flatLayImagePath" optional="YES" attributeType="String"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="isSoftDeleted" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
@@ -11,22 +22,34 @@
         <attribute name="lastWornDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="memberId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="notes" optional="YES" attributeType="String"/>
-        <attribute name="occasions" optional="YES" attributeType="Transformable" valueTransformerName="StringArrayTransformer" customClassName="NSArray"/>
+        <attribute name="occasions" optional="YES" attributeType="String"/>
+        <attribute name="originalImageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="originalImagePath" optional="YES" attributeType="String"/>
         <attribute name="ossKey" optional="YES" attributeType="String"/>
         <attribute name="pattern" optional="YES" attributeType="String"/>
-        <attribute name="seasons" optional="YES" attributeType="Transformable" valueTransformerName="StringArrayTransformer" customClassName="NSArray"/>
-        <attribute name="styles" optional="YES" attributeType="Transformable" valueTransformerName="StringArrayTransformer" customClassName="NSArray"/>
+        <attribute name="seasons" optional="YES" attributeType="String"/>
+        <attribute name="styles" optional="YES" attributeType="String"/>
         <attribute name="subCategory" optional="YES" attributeType="String"/>
         <attribute name="wearCount" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
     </entity>
     <entity name="FamilyMember" representedClassName="FamilyMember" syncable="YES" codeGenerationType="none">
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="name" optional="YES" attributeType="String"/>
         <attribute name="sortOrder" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
     </entity>
     <entity name="Outfit" representedClassName="Outfit" syncable="YES" codeGenerationType="none">
+        <attribute name="collageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="collagePath" optional="YES" attributeType="String"/>
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
@@ -35,7 +58,13 @@
         <attribute name="memberId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="name" optional="YES" attributeType="String"/>
         <attribute name="occasion" optional="YES" attributeType="String"/>
+        <attribute name="tryOnResultData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="tryOnResultPath" optional="YES" attributeType="String"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
     </entity>
     <entity name="WearLog" representedClassName="WearLog" syncable="YES" codeGenerationType="none">
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
@@ -43,5 +72,10 @@
         <attribute name="note" optional="YES" attributeType="String"/>
         <attribute name="outfitID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="wornDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
     </entity>
 </model>
