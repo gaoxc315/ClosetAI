@@ -93,7 +93,7 @@ ClosetAI/
 | iOS | 26.0+ |
 | Xcode | 26 |
 | Device | iPhone（拍照需相机） |
-| Apple ID | 真机需登录 iCloud；CloudKit 需付费开发者账号启用容器 |
+| Apple ID | CloudKit 同步需**付费** Apple Developer Program（Personal Team 不支持 iCloud） |
 | Tool（可选） | [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`) |
 | API（可选） | [阿里云 DashScope](https://dashscope.aliyun.com/) 按量计费 API Key，仅开启 AI 时需要 |
 
@@ -110,17 +110,18 @@ cd ClosetAI
 
 仓库已包含 `ClosetAI.xcodeproj`，可直接打开。
 
-### 2. Configure Signing & iCloud
+### 2. Configure Signing
 
-在 Xcode 的 **Signing & Capabilities** 中选择你的 Team。工程已包含 CloudKit entitlement（容器 `iCloud.com.gaoxiancheng.closetai`）。
+在 Xcode 的 **Signing & Capabilities** 中选择你的 Team。
 
-若改 Bundle Identifier，请同步修改：
+**Personal Team（免费）**：不要添加 iCloud capability。默认 `AppFeatures.iCloudSyncEnabled = false`，数据仅本机；可正常签名安装。
 
-1. `ClosetAI.entitlements` 中的 iCloud 容器 ID  
-2. `PersistenceController.cloudKitContainerID`  
-3. `project.yml` / Xcode 的 `PRODUCT_BUNDLE_IDENTIFIER`  
+**付费 Apple Developer Program（启用跨设备同步）**：
 
-首次在真机运行时，Xcode 会在 CloudKit **Development** 环境自动创建 schema。上架前请在 [CloudKit Console](https://icloud.developer.apple.com/) 将 schema 部署到 **Production**。
+1. 将 [`AppFeatures.iCloudSyncEnabled`](ClosetAI/Utilities/AppFeatures.swift) 改为 `true`
+2. 在 Xcode → **Signing & Capabilities** → **+ Capability** → **iCloud** → 勾选 **CloudKit**，容器用 `iCloud.com.gaoxiancheng.closetai`（或写入 `ClosetAI.entitlements`）
+3. 若改 Bundle ID，同步改容器 ID 与 `PersistenceController.cloudKitContainerID`
+4. 首次真机运行会在 CloudKit **Development** 创建 schema；上架前在 [CloudKit Console](https://icloud.developer.apple.com/) 部署到 **Production**
 
 如果使用 XcodeGen，同步修改 `project.yml` 后执行 `xcodegen generate`。
 
@@ -167,11 +168,13 @@ enum AppFeatures {
 
 ## ☁️ 换机 / 多设备
 
-1. 旧机登录 iCloud，打开 ClosetAI，在 **设置 → iCloud 同步** 确认状态为「已开启」，等待衣橱同步完成  
-2. 新机登录 **同一 Apple ID**，安装并打开 ClosetAI  
-3. 等待 CloudKit 拉取；衣物、穿搭、分类与图片会自动出现，无需重新导入  
+需先按上文启用 CloudKit（付费开发者账号）。然后：
 
-未登录 iCloud 时 App 仍可离线使用，数据仅保存在本机。
+1. 旧机登录 iCloud，打开 ClosetAI，在 **设置 → iCloud 同步** 确认「已开启」，等待同步完成  
+2. 新机登录 **同一 Apple ID**，安装并打开 ClosetAI  
+3. 等待 CloudKit 拉取；衣物、穿搭、分类与图片会自动出现  
+
+未启用 CloudKit / 未登录 iCloud 时，数据仅保存在本机（可用整机 iCloud 备份恢复）。
 
 ---
 

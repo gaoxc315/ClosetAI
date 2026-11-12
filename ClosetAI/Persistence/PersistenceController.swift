@@ -89,6 +89,14 @@ final class PersistenceController: ObservableObject {
         description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
         description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
 
+        // Personal Team 无 iCloud entitlement；未开启开关时强制本机存储，避免签名/运行失败。
+        guard AppFeatures.iCloudSyncEnabled else {
+            description.cloudKitContainerOptions = nil
+            cloudKitEnabled = false
+            syncStatus = .unavailable("需付费开发者账号")
+            return
+        }
+
         let iCloudAvailable = FileManager.default.ubiquityIdentityToken != nil
         if iCloudAvailable {
             description.cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(

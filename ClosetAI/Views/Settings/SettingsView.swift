@@ -59,7 +59,7 @@ struct SettingsView: View {
         } header: {
             Text("iCloud 同步")
         } footer: {
-            Text("衣物、穿搭、分类与图片会同步到你的 iCloud。换新手机后安装 App 并登录同一 Apple ID，即可自动恢复，无需重新导入图片。")
+            Text(settingsVM.syncFooterText)
         }
     }
 
@@ -150,6 +150,13 @@ class SettingsViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         apply(PersistenceController.shared.syncStatus)
+    }
+
+    var syncFooterText: String {
+        if AppFeatures.iCloudSyncEnabled {
+            return "衣物、穿搭、分类与图片会同步到你的 iCloud。换新手机后安装 App 并登录同一 Apple ID，即可自动恢复，无需重新导入图片。"
+        }
+        return "当前为仅本机模式。免费 Personal Team 不支持 iCloud；加入 Apple Developer Program 后，将 AppFeatures.iCloudSyncEnabled 设为 true 并启用 CloudKit entitlement，即可跨设备同步。"
     }
 
     private func apply(_ status: CloudSyncStatus) {
